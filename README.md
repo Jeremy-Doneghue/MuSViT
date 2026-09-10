@@ -199,13 +199,15 @@ Artifacts (`PDFdifficulty/`, `difficulty_embeddings/`, `weights/`, `output/`) ar
   and Rohrbach, Anna
   and Schindler, Konrad
   and Tombari, Federico",
-  title="MuSViT: A Foundation Vision Model for Sheet Music Representation",
+  title="MuSViT: A Foundation Vision Model for Sheet Music Representation",
   booktitle="Computer Vision -- ECCV 2026",
   year="2026",
   publisher="Springer Nature Switzerland",
   address="Cham",
   pages="459--476",
-  isbn="978-3-032-37271-0"
+  isbn="978-3-032-37271-0",
+  doi="10.1007/978-3-032-37271-0_25",
+  url="https://doi.org/10.1007/978-3-032-37271-0_25"
 }
 ```
 

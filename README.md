@@ -185,13 +185,27 @@ Artifacts (`PDFdifficulty/`, `difficulty_embeddings/`, `weights/`, `output/`) ar
 ## 📖 Citations
 
 ```bibtex
-@inproceedings{penarrubia2026musvit,
-  title     = {MuSViT: A Foundation Vision Model for Sheet Music Representation},
-  author    = {Penarrubia, Carlos and Rios-Vila, Antonio and Fuentes-Martinez, Eliseo 
-              and Martinez-Sevilla, Juan C. and Castellanos, Francisco J. and 
-              Alfaro-Contreras, Maria and Calvo-Zaragoza, Jorge},
-  booktitle = {European Conference on Computer Vision (ECCV)},
-  year      = {2026}
+@InProceedings{Penarrubia:ECCV:2026,
+  author="Penarrubia, Carlos
+  and Rios-Vila, Antonio
+  and Fuentes-Martinez, Eliseo
+  and Martinez-Sevilla, Juan C.
+  and Castellanos, Francisco J.
+  and Alfaro-Contreras, Mar{\'i}a
+  and Calvo-Zaragoza, Jorge",
+  editor="Favaro, Paolo
+  and Kukelova, Zuzana
+  and Maki, Atsuto
+  and Rohrbach, Anna
+  and Schindler, Konrad
+  and Tombari, Federico",
+  title="MuSViT: A Foundation Vision Model for Sheet Music Representation",
+  booktitle="Computer Vision -- ECCV 2026",
+  year="2026",
+  publisher="Springer Nature Switzerland",
+  address="Cham",
+  pages="459--476",
+  isbn="978-3-032-37271-0"
 }
 ```
 

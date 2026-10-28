@@ -115,6 +115,14 @@ uv run musvit full-page-omr \
 
 Checkpoints and W&B logs are written inside `experiments/full_page_omr/` (`weights/`, `wandb_logs/`).
 
+The experiment automatically selects CUDA, Apple Silicon MPS, or CPU. CUDA
+defaults to mixed precision; MPS and CPU default to full precision. On macOS,
+data loading defaults to zero worker processes to avoid duplicating the in-memory
+datasets and synthetic generator. Override these settings with `--accelerator`,
+`--precision`, and `--num_workers`. For example, add `--accelerator mps
+--num_workers 0` on a Mac. Full-page training memory depends strongly on the
+transcription length; benchmark representative pages before a long run.
+
 ### Staff-level OMR (fine-tuning)
 
 ```bash

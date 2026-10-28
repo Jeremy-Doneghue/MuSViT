@@ -4,6 +4,7 @@ from fire import Fire
 from loguru import logger
 
 from . import _globals
+from .runtime import runtime_settings
 from .config.ExperimentConfigWrapper import ExperimentConfig, experiment_config_from_dict
 from .data import SyntheticGrandStaffDataset, CLFinetuningDataset, SynthRealFinetuningDataset
 from .smt_foundation import SMTFoundationConfig, SMTFoundationModelForCausalLM
@@ -27,12 +28,16 @@ DATASETS_TYPE = {
 def main(config: ExperimentConfig, experiment_name,
          foundation_architecture="ViTMAEBase", foundation_weights="carlospm12/LSMT-MAE-Base-1024-16",
          finetuning_technique="CL", from_checkpoint: str | None = None, resolution: int | None = None,
-         max_steps: int = -1, train: bool = True, starting_weights: str | None = None):
+         max_steps: int = -1, train: bool = True, starting_weights: str | None = None,
+         accelerator: str = "auto", precision: str | None = None, num_workers: int | None = None):
     if resolution is None:
         _globals.resolution = 1024
     else:
         _globals.resolution = resolution
     resolution = _globals.resolution
+    accelerator, precision, config.data.num_workers = runtime_settings(
+        accelerator, precision, num_workers, config.data.num_workers)
+    logger.info(f"Using accelerator={accelerator}, precision={precision}, num_workers={config.data.num_workers}")
 
     # Credentials (WANDB_API_KEY / HUGGINGFACE_KEY) are loaded once by the `musvit`
     # launcher (see musvit/env.py) before this function runs.
@@ -71,7 +76,7 @@ def main(config: ExperimentConfig, experiment_name,
     trainer = Trainer(max_epochs=100000, max_steps=max_steps,
                       check_val_every_n_epoch=3500,
                       callbacks=[epoch_checkpointer, checkpointer, early_stopping], logger=wandb_logger,
-                      precision='16-mixed')
+                      accelerator=accelerator, devices=1, precision=precision)
 
     data.train_dataset.set_trainer_data(trainer)
 
@@ -94,7 +99,8 @@ def main(config: ExperimentConfig, experiment_name,
 def launch(config_path: str, experiment_name: str,
            foundation_architecture="ViTMAEBase", foundation_weights="carlospm12/LSMT-MAE-Base-1024-16",
            finetuning: str = "CL", from_checkpoint: str | None = None, resolution: int | None = None,
-           max_steps: int = -1, train: bool = True, starting_weights: str | None = None, learning_rate: float | None = None):
+           max_steps: int = -1, train: bool = True, starting_weights: str | None = None, learning_rate: float | None = None,
+           accelerator: str = "auto", precision: str | None = None, num_workers: int | None = None):
     with open(config_path, 'r') as file:
         config_dict = json.load(file)
         config = experiment_config_from_dict(config_dict)
@@ -105,7 +111,8 @@ def launch(config_path: str, experiment_name: str,
     main(config=config, experiment_name=experiment_name,
          foundation_architecture=foundation_architecture,
          foundation_weights=foundation_weights, finetuning_technique=finetuning, from_checkpoint=from_checkpoint,
-         resolution=resolution, max_steps=max_steps, train=train, starting_weights=starting_weights)
+         resolution=resolution, max_steps=max_steps, train=train, starting_weights=starting_weights,
+         accelerator=accelerator, precision=precision, num_workers=num_workers)
 
 
 if __name__ == "__main__":

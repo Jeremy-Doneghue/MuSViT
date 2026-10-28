@@ -30,13 +30,17 @@ def run(config_path: str, experiment_name: str,
         foundation_weights: str = "carlospm12/LSMT-MAE-Base-1024-16",
         finetuning: str = "CL", from_checkpoint: str | None = None,
         resolution: int | None = None, max_steps: int = -1, train: bool = True,
-        starting_weights: str | None = None, learning_rate: float | None = None):
+        starting_weights: str | None = None, learning_rate: float | None = None,
+        accelerator: str = "auto", precision: str | None = None, num_workers: int | None = None):
     """Fine-tune MuSViT for full-page Optical Music Recognition.
 
     Args:
         config_path: JSON config (e.g. config/Polish_Scores/finetuning.json).
         experiment_name: Name used for checkpoints and the W&B run.
         finetuning: Finetuning regime: "CL", "SR", "CL1" or "R".
+        accelerator: "auto", "mps", "cuda", or "cpu".
+        precision: Defaults to "32-true" on MPS/CPU, "16-mixed" on CUDA.
+        num_workers: Defaults to zero on macOS, otherwise the JSON setting.
         See experiments/full_page_omr/finetune.py:launch for the rest.
     """
     config_path = _resolve_config(config_path)  # resolve before chdir
@@ -53,4 +57,7 @@ def run(config_path: str, experiment_name: str,
             train=train,
             starting_weights=starting_weights,
             learning_rate=learning_rate,
+            accelerator=accelerator,
+            precision=precision,
+            num_workers=num_workers,
         )

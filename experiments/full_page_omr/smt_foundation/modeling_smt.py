@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
+from math import isqrt
 from loguru import logger
 from torch.nn.init import xavier_uniform_
 from transformers import PreTrainedModel, ViTModel
@@ -22,7 +23,7 @@ class PositionalEncoding2D(nn.Module):
         self.h_max = h_max
         self.max_w = w_max
         self.dim = dim
-        self.pe = torch.zeros((1, dim, h_max, w_max), device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'), requires_grad=False)
+        self.register_buffer("pe", torch.zeros((1, dim, h_max, w_max)), persistent=False)
 
         div = torch.exp(-torch.arange(0., dim // 2, 2) / dim * torch.log(torch.tensor(10000.0))).unsqueeze(1)
         w_pos = torch.arange(0., w_max)
@@ -49,7 +50,7 @@ class PositionalEncoding1D(nn.Module):
         super(PositionalEncoding1D, self).__init__()
         self.len_max = len_max
         self.dim = dim
-        self.pe = torch.zeros((1, dim, len_max), device=torch.device('cuda' if torch.cuda.is_available() else 'cpu'), requires_grad=False)
+        self.register_buffer("pe", torch.zeros((1, dim, len_max)), persistent=False)
 
         div = torch.exp(-torch.arange(0., dim, 2) / dim * torch.log(torch.tensor(10000.0))).unsqueeze(1)
         l_pos = torch.arange(0., len_max)
@@ -364,7 +365,7 @@ class SMTFoundationModelForCausalLM(PreTrainedModel):
 
         adaptor_in = IMPL_DICT[config.foundation_architecture][1]
         #self.weight_sum = nn.Parameter(torch.zeros(25, 1, 1, 1), requires_grad=True)
-        self.adaptor = nn.Conv1d(in_channels=adaptor_in, out_channels=256, kernel_size=1, stride=1)
+        self.adaptor = nn.Conv1d(in_channels=adaptor_in, out_channels=config.d_model, kernel_size=1, stride=1)
         #self.adaptor = nn.Sequential([
         #    nn.Conv2d(768, 256, 3, padding="same"), 
         #    nn.GeLU(), 
@@ -373,7 +374,11 @@ class SMTFoundationModelForCausalLM(PreTrainedModel):
         #    nn.Conv2d(256, 256, 2, 2)])
         
         self.freeze_encoder()
-        self.positional_2D = PositionalEncoding2D(config.d_model, config.maxh, config.maxw)
+        # These positions describe patches, not pixels. At 1024px/16px this
+        # needs a 64x64 grid rather than a 1024x1024 allocation.
+        patch_size = self.encoder.config.patch_size
+        self.positional_2D = PositionalEncoding2D(
+            config.d_model, config.maxh // patch_size, config.maxw // patch_size)
 
         self.padding_token = config.padding_token
         self.loss = nn.CrossEntropyLoss(ignore_index=self.padding_token)
@@ -406,8 +411,13 @@ class SMTFoundationModelForCausalLM(PreTrainedModel):
 
         ln = ln - offset
         encoder_output = encoder_output[:, :, offset:]
-        encoder_output = encoder_output.reshape((b, 768, int(ln**(1/2.)), int(ln**(1/2.)))) 
+        side = isqrt(ln)
+        if side * side != ln:
+            raise ValueError("Full-page OMR expects a square image patch grid.")
+        # Conv1d consumes [batch, channels, patches]; restore the spatial grid
+        # only after projection. Keep the existing adaptor checkpoint shape.
         encoder_output = self.adaptor(encoder_output)
+        encoder_output = encoder_output.reshape(b, self.config.d_model, side, side)
         pos_features = self.positional_2D(encoder_output)
         features = torch.flatten(encoder_output, start_dim=2, end_dim=3).permute(2,0,1)
         enhanced_features = features

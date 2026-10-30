@@ -39,11 +39,6 @@ def _load_full_page_omr():
     return run
 
 
-def _load_embeddings():
-    from experiments.embeddings_test.entrypoint import run, sweep
-    return {"run": run, "sweep": sweep}
-
-
 def _load_staff_level_omr():
     from experiments.staff_level_omr.entrypoint import run
     return run
@@ -54,23 +49,11 @@ def _load_object_detection():
     return run
 
 
-def _load_difficulty():
-    from experiments.difficulty.entrypoint import embeddings, prepare_images, run
-    return {"prepare-images": prepare_images, "embeddings": embeddings, "run": run}
-
-
 EXPERIMENTS: tuple[Experiment, ...] = (
     Experiment(
         "full-page-omr", "experiments/full_page_omr", _load_full_page_omr,
         (("full-page-omr <config_path> <experiment_name>",
           "Fine-tune MuSViT for full-page OMR."),),
-    ),
-    Experiment(
-        "embeddings", "experiments/embeddings_test", _load_embeddings,
-        (("embeddings run --model <id>",
-          "Embedding vs transcription distance analysis (single MuSViT encoder)."),
-         ("embeddings sweep --models_set <light|default|full>",
-          "Same analysis over a preset list of MuSViT variants.")),
     ),
     Experiment(
         "staff-level-omr", "experiments/staff_level_omr", _load_staff_level_omr,
@@ -81,15 +64,6 @@ EXPERIMENTS: tuple[Experiment, ...] = (
         "object-detection", "experiments/object_detection", _load_object_detection,
         (("object-detection --train_images <dir> --train_ann <coco.json>",
           "Fine-tune MuSViT + Faster R-CNN for object detection (full / frozen / LoRA)."),),
-    ),
-    Experiment(
-        "difficulty", "experiments/difficulty", _load_difficulty,
-        (("difficulty prepare-images --dataset_name <cipi|fs|ps>",
-          "Stage 1: rasterize score PDFs into per-page PNGs."),
-         ("difficulty embeddings --model_name <id> --dataset_name <..> --architecture <..>",
-          "Stage 2: extract frozen-MuSViT page embeddings."),
-         ("difficulty run --model_name <id> --dataset_name <..> --architecture <..>",
-          "Stage 3: train/test the difficulty classifier head.")),
     ),
 )
 

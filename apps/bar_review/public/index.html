@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Bar Review · MuSViT</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <aside class="rail">
+    <a class="brand" href="/">♮ <span>Bar Review<small>MuSViT transcription workbench</small></span></a>
+    <button id="import-open" class="import-button">＋ Import scans</button>
+    <div class="rail-label">YOUR COLLECTION</div>
+    <div id="documents" class="documents"></div>
+    <div class="rail-bottom"><span class="local-dot"></span> Local workspace<br><small>Scans and annotations stay on this computer.</small><button id="help-open" class="help-button">Keyboard reference <kbd>?</kbd></button></div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar"><span>COLLECTION <span class="slash">/</span> <strong id="document-title">Your transcription queue</strong></span><button id="export" class="quiet">↓ Export reviewed pairs</button></header>
+    <main>
+      <div class="heading"><div><div class="eyebrow">ONE PASSAGE AT A TIME</div><h1 id="region-title">A little music. A little progress.</h1><p id="region-subtitle">Import a scan to start your review queue.</p></div><div class="progress"><strong id="progress-number">0 / 0</strong><span>regions reviewed</span><div class="progress-track"><i id="progress-fill"></i></div></div></div>
+      <div class="queue-toolbar"><div id="filters"><button data-filter="pending" class="selected">To transcribe</button><button data-filter="reviewed">Reviewed</button><button data-filter="skipped">Skipped</button><button data-filter="unclear">Unclear</button><button data-filter="bad_crop">Bad crops</button></div><span id="save-state" role="status" aria-live="polite">Ready</span></div>
+      <section id="empty" class="empty"><span class="empty-symbol">𝄞</span><h2>Your next bar will appear here.</h2><p>Import a PDF or image. We’ll propose staff and bar regions,<br>then present them in reading order.</p><button id="empty-import" class="primary">Import a scan</button></section>
+      <div id="review" class="review-grid" hidden>
+        <div class="review-main">
+          <section class="panel context-panel"><div class="panel-head"><h2>Keep the context</h2><div><button id="context-toggle" class="quiet">Show full page</button></div></div><p class="panel-caption">The highlighted region is in focus. Surrounding notation stays in view.</p><div class="context-image"><canvas id="context-canvas" aria-label="Full staff with current region highlighted"></canvas></div></section>
+          <section class="panel focus-panel"><div class="panel-head"><h2 id="focus-title">Source passage</h2><span class="tag" id="detection-tag">Unverified boundary</span></div><div class="focus-image"><canvas id="focus-canvas" aria-label="Enlarged source passage"></canvas></div><details id="crop-details"><summary>Adjust the crop</summary><p>Boundaries are proposals. Adjust these page coordinates if a symbol is clipped or a region is incorrect.</p><div class="crop-fields"><label>Left<input id="crop-left" type="number"></label><label>Top<input id="crop-top" type="number"></label><label>Right<input id="crop-right" type="number"></label><label>Bottom<input id="crop-bottom" type="number"></label><button id="crop-apply">Apply crop</button></div></details></section>
+          <section class="panel notation-panel"><div class="panel-head"><h2>Your transcription</h2><div><button id="play" class="quiet">▷ Play</button><button id="xml-import" class="quiet">Load MusicXML</button><input id="xml-file" type="file" accept=".xml,.musicxml" hidden></div></div>
+            <div class="editor-toolbar" id="editor-toolbar"><button data-action="undo" title="Undo (Ctrl/Cmd Z)">↶</button><span></span><button data-duration="16384" title="Whole note (1)">Whole</button><button data-duration="8192" title="Half note (2)">Half</button><button data-duration="4096" title="Quarter note (3)">Quarter</button><button data-duration="2048" title="Eighth note (4)">Eighth</button><button data-duration="1024" title="Sixteenth note (5)">16th</button><button data-action="rest" title="Rest (R)">Rest</button><button data-action="dot" title="Dot duration (.)">·</button><button data-action="triplet" title="Triplet (T)">3</button><button data-action="sharp" title="Raise semitone (+)">♯</button><button data-action="flat" title="Lower semitone (-)">♭</button><button data-action="accent">&gt;</button><button data-action="staccato">Stacc.</button><button data-action="tie">Tie</button><button data-action="slur">Slur</button><button data-action="reset" class="reset-editor">Reset</button></div>
+            <div class="editor-toolbar"><label style="margin:0">Dynamic <select id="dynamic"><option value="mf">mf</option><option>pp</option><option>p</option><option>mp</option><option>f</option><option>ff</option><option>sfz</option><option value="">None</option></select></label><button id="apply-dynamic">Set dynamic</button><label style="margin:0">Text direction <input id="direction-text" placeholder="e.g. unis." maxlength="200"></label><button id="apply-direction">Set text</button><span>Applies to selected note or rest. Empty text removes its direction.</span></div>
+            <iframe id="notation" src="editor.html" title="Interactive notation editor"></iframe>
+            <div class="editor-hint"><span><kbd>A–G</kbd> notes <kbd>1–5</kbd> duration <kbd>← →</kbd> move <kbd>↑ ↓</kbd> octave <kbd>R</kbd> rest</span><span>Notation powered by Smoosic</span></div>
+          </section>
+        </div>
+        <aside class="details-column"><section class="panel"><div class="panel-head"><h2>Musical context</h2></div><p class="panel-caption">Set once per page; override for a change within the part. These values are not inferred from the scan.</p>
+          <label>Instrument / part<input id="instrument" placeholder="e.g. 1st alto sax"></label>
+          <div class="field-pair"><label>Clef<select id="clef"><option value="treble">Treble</option><option value="bass">Bass</option><option value="alto">Alto</option><option value="tenor">Tenor</option><option value="percussion">Percussion</option></select></label><label>Key signature<select id="fifths"></select></label></div>
+          <div class="field-pair"><label>Beats<input id="beats" type="number" min="1" max="32" value="4"></label><label>Beat unit<select id="beat-type"><option>1</option><option>2</option><option selected>4</option><option>8</option><option>16</option><option>32</option><option>64</option></select></label></div>
+          <label>Sounding pitch offset<select id="transpose"><option value="0">Concert pitch (0)</option><option value="-2">B♭ instrument (−2)</option><option value="-9">E♭ alto (−9)</option><option value="-14">B♭ tenor (−14)</option><option value="-21">E♭ baritone (−21)</option><option value="-12">Octave below (−12)</option></select></label>
+          <label class="check-label"><input id="context-confirmed" type="checkbox"> I checked this musical context</label>
+          <label class="check-label"><input id="context-page" type="checkbox" checked> Use as this page’s default</label>
+          <button id="apply-context">Apply to editor</button><p class="small-note">Changing context does not transpose entered notes. A new page starts with unconfirmed context.</p>
+        </section>
+        <section class="panel"><div class="panel-head"><h2>Passage details</h2></div><label>Bars represented<input id="bar-count" type="number" min="1" max="128" value="1"></label><p class="small-note">A multimeasure rest may represent several bars. Set its count here; enter its notation in the editor.</p><label>Review notes<textarea id="notes" rows="3" placeholder="Uncertain accidental, tie continues, missing barline…"></textarea></label><div id="region-list" class="region-list"></div></section></aside>
+      </div>
+    </main>
+    <footer class="review-footer"><div><button id="previous" class="quiet">← Previous</button><button id="next" class="quiet">Next →</button></div><div><button id="bad-crop">Bad crop <kbd>⌥ B</kbd></button><button id="unclear">Unclear <kbd>⌥ U</kbd></button><button id="skip">Skip <kbd>⌥ S</kbd></button><button id="approve" class="primary">Approve & next <kbd>⌘ ↵</kbd></button></div></footer>
+  </div>
+  <dialog id="import-dialog"><form id="import-form"><div class="modal-head"><div><div class="eyebrow">BUILD YOUR COLLECTION</div><h2>Bring in a scan</h2></div><button type="button" id="import-close" aria-label="Close import">×</button></div><p>Choose a local PDF or image. The app keeps a working copy and proposes passages automatically.</p><label>Folder path<input id="source-folder" placeholder="/path/to/your/scans"></label><button id="find-files" type="button">Find scans</button><label>Scan<select id="source-file"><option value="">Find scans in your folder first</option></select></label><div class="field-pair"><label>Start at page<input id="start-page" type="number" min="1" value="1"></label><label>Pages to import<input id="page-count" type="number" min="1" max="10" value="1"></label></div><p class="small-note">Start with one page to check detection quality. Section PDFs can contain several individual parts.</p><p id="import-status" role="status"></p><button id="import-submit" class="primary" type="submit">Prepare review queue</button></form></dialog>
+  <dialog id="help-dialog"><div class="modal-head"><h2>Stay in the music</h2><button id="help-close" aria-label="Close keyboard reference">×</button></div><p>Click a note to select it, or use the arrow keys. Hold Shift while moving to select a range for a slur.</p><dl><dt>A–G</dt><dd>Enter a pitch, then move to the next note</dd><dt>1 / 2 / 3 / 4 / 5</dt><dd>Whole / half / quarter / eighth / sixteenth</dd><dt>R · T</dt><dd>Rest · dot · triplet</dd><dt>↑ / ↓</dt><dd>Move selected pitch an octave</dd><dt>+ / −</dt><dd>Raise / lower a semitone</dd><dt>Ctrl/Cmd Z</dt><dd>Undo notation edit</dd><dt>Ctrl/Cmd Enter</dt><dd>Approve and show the next pending passage</dd><dt>Alt S / U / B</dt><dd>Skip / unclear / bad crop</dd></dl><p class="small-note">This prototype does not recognize notes yet. Blank measures are entry scaffolding, not predictions. Check every rest and duration before approving.</p></dialog>
+  <div id="toast" role="alert" hidden></div>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

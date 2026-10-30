@@ -223,6 +223,8 @@ __marimo__/
 
 # Training / experiment outputs (full-page-omr)
 outputs/
+# Local development reference parts.
+/data/reference_parts/
 out/
 weights/
 wandb/
@@ -246,3 +248,8 @@ slurm_log/
 
 # OS files
 .DS_Store
+
+
+# Other local artifacts
+model.safetensors
+musvit_paper.pdf

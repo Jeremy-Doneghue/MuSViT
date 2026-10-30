@@ -27,17 +27,22 @@
 <a name=about></a>
 ## 📚 About
 
-This repository contains the official code for **MuSViT: A Foundation Vision Model for Sheet Music Representation**, presented at ECCV 2026.
+This working repository is based on the official code for **MuSViT: A Foundation Vision Model for Sheet Music Representation**, presented at ECCV 2026, and focuses on synthetic data and OMR. The inherited difficulty-estimation and embedding-analysis experiments have been removed; staff-level OMR and symbol detection remain available as related baselines.
 
 This is a **monorepo** collecting the experiments around MuSViT. Every experiment lives under [`experiments/`](experiments/) and is launched from the repository root through a single cross-platform CLI: **`musvit`**.
+
+For ongoing synthetic full-page/multi-page OMR work, start with the
+[project diary](PROJECT_DIARY.md): current state, proposed next steps, and dated
+session handoffs. The [synthetic parts guide](experiments/full_page_omr/SYNTHETIC_PARTS.md)
+documents the generator and dataset conventions.
 
 This project includes:
 - A central CLI (`musvit`) to discover and run all experiments from the repository root.
 - A full-page Optical Music Recognition (OMR) fine-tuning pipeline.
 - A staff-level OMR fine-tuning pipeline (linear probing or LoRA).
 - An object-detection fine-tuning pipeline (Faster R-CNN with a MuSViT backbone).
-- An embeddings analysis pipeline correlating MuSViT embedding distances with transcription distances (single encoder or cross-platform sweep).
-- A score-difficulty estimation pipeline built on frozen MuSViT page embeddings.
+- Synthetic instrumental-part generation, font coverage checks, and scan-degradation experiments.
+- A local transcription-review prototype for building reviewed image/MusicXML pairs.
 
 <a name=repository-layout></a>
 ## ⚙️ Repository Layout
@@ -48,8 +53,22 @@ This project includes:
 | [`experiments/full_page_omr/`](experiments/full_page_omr/) | Fine-tune MuSViT for full-page Optical Music Recognition (OMR). |
 | [`experiments/staff_level_omr/`](experiments/staff_level_omr/) | Fine-tune MuSViT for staff-level OMR (BiLSTM/CTC head; linear probing or LoRA). |
 | [`experiments/object_detection/`](experiments/object_detection/) | Fine-tune MuSViT + Faster R-CNN for object detection (COCO-format data). |
-| [`experiments/embeddings_test/`](experiments/embeddings_test/) | Correlate MuSViT embedding distances with transcription distances. |
-| [`experiments/difficulty/`](experiments/difficulty/) | Estimate score difficulty from frozen MuSViT page embeddings. |
+| [`experiments/scan_degradation/`](experiments/scan_degradation/) | Explore reproducible photocopy effects for training-image augmentation. |
+| [`apps/bar_review/`](apps/bar_review/) | Review and transcribe scanned passages locally. |
+| [`data/`](data/) | Shared local PDF/MusicXML reference parts. |
+
+Generated artifacts live under the producing experiment's `outputs/` directory
+and are ignored by Git. Synthetic parts and font sheets are under
+`experiments/full_page_omr/outputs/`; scan comparisons are under
+`experiments/scan_degradation/outputs/`. Older synthetic exports are retained in
+`experiments/full_page_omr/outputs/archive/`. The root `resources/` directory
+contains the project logo. Engraving uses Verovio's bundled music fonts; no
+separate downloaded Petaluma bundle is needed.
+
+For visual scan experiments, open the
+[scan degradation notebook](experiments/scan_degradation/scan_degradation.ipynb).
+The [experiment guide](experiments/scan_degradation/README.md) includes Jupyter
+setup and launch instructions.
 
 <a name=installation></a>
 ## 🔧 Installation
@@ -62,10 +81,10 @@ uv sync
 
 This also installs the `musvit` console command into the project environment.
 
-Two experiments additionally rely on **system libraries** that `uv` does not manage:
+Rendering and PDF import additionally rely on **system libraries** that `uv` does not manage:
 
 - **ImageMagick** — used by `wand` in the full-page-OMR synthetic data generator (`brew install imagemagick`, or `apt install libmagickwand-dev`).
-- **poppler** — used by `pdf2image` in the score-difficulty rasterization stage (`brew install poppler`, or `apt install poppler-utils`).
+- **poppler** — used by PDF import in Bar Review and by the scan-degradation experiment (`brew install poppler`, or `apt install poppler-utils`).
 
 <a name=environment-variables></a>
 ## 🔑 Environment Variables
@@ -99,9 +118,6 @@ Each subcommand maps its options directly onto the experiment's Python entrypoin
 uv run musvit full-page-omr --help
 uv run musvit staff-level-omr --help
 uv run musvit object-detection --help
-uv run musvit embeddings run --help
-uv run musvit embeddings sweep --help
-uv run musvit difficulty run --help
 ```
 
 ### Full-page OMR (fine-tuning)
@@ -122,6 +138,41 @@ datasets and synthetic generator. Override these settings with `--accelerator`,
 `--precision`, and `--num_workers`. For example, add `--accelerator mps
 --num_workers 0` on a Mac. Full-page training memory depends strongly on the
 transcription length; benchmark representative pages before a long run.
+
+To preview synthetic training pairs without training a model:
+
+```bash
+uv run python -m experiments.full_page_omr.generate_examples \
+  --count 4 --max-systems 4 --seed 20261028
+```
+
+This downloads GrandStaff if it is not already cached, then uses the training
+renderer and augmentation pipeline. Outputs are saved to
+`experiments/full_page_omr/outputs/training_examples/`: a `preview.jpg` contact
+sheet, rendered and augmented images, exact `bekern` target tokens, decoded
+targets, reconstructed `.krn` files, and a manifest recording seeds and image
+sizes. Source excerpt counts cycle from 1 to `--max-systems`; Verovio determines
+the visible number of systems. Use `--output-dir` to choose another folder
+(relative paths are resolved from your current directory), or `--resolution`
+to change the default 1024px training input size. The command requires the same
+native rendering dependencies as full-page training. On Homebrew macOS, if
+those libraries are not found, prefix the command with
+`MAGICK_HOME="$(brew --prefix imagemagick)" DYLD_FALLBACK_LIBRARY_PATH="$(brew --prefix)/lib"`.
+
+### Local transcription editor
+
+The [Bar Review prototype](apps/bar_review/README.md) presents scanned parts as
+a queue of automatically proposed bar regions, retaining the surrounding staff
+for context. It includes a Smoosic notation editor, separate review statuses,
+local draft saving, and export of approved image/MusicXML pairs.
+
+```bash
+npm ci --prefix apps/bar_review
+uv run python apps/bar_review/server.py
+```
+
+Open <http://127.0.0.1:8765/>. Scans and annotations remain local; segmentation
+is preliminary, and the editor is not yet connected to an OMR model.
 
 ### Staff-level OMR (fine-tuning)
 
@@ -148,46 +199,6 @@ uv run musvit object-detection \
 ```
 
 Fine-tunes a Faster R-CNN with a MuSViT + FPN backbone. Annotations are read in **COCO format** (`images` / `annotations` / `categories`); convert DeepScores (or any detection set) to COCO and point `--train_ann` / `--val_ann` at the JSON files — the number of classes is inferred from `categories`. `--finetuning` selects `full`, `frozen` (freeze the ViT) or `lora` (LoRA adapters on q/k/v). Checkpoints (`ckpt-best.pt`, `ckpt-latest.pt`) are written inside `--out_dir` (under `experiments/object_detection/`); `--use_wandb` enables W&B logging and `--from_checkpoint` resumes. Requires a GPU.
-
-### Embeddings analysis (single encoder)
-
-```bash
-uv run musvit embeddings run --model carlospm12/LSMT-MAE-Base-1024-16 --device 0
-```
-
-Embeddings, results and logs are written inside `experiments/embeddings_test/` (`embeddings/`, `results/`).
-
-### Embeddings sweep (several MuSViT variants)
-
-Runs the analysis over a preset list of MuSViT variants, writing a per-model log and a `summary.tsv`:
-
-```bash
-uv run musvit embeddings sweep --models_set light
-uv run musvit embeddings sweep --models_set default --device 0
-uv run musvit embeddings sweep --only carlospm12/LSMT-MAE-Large-1024-16
-```
-
-Model sets `light`, `default`, `full` (defined in [`experiments/embeddings_test/model_sets.py`](experiments/embeddings_test/model_sets.py)) contain only MuSViT (LSMT-MAE) variants. `full` additionally expects a local `models/MAE-8X8-Small` checkpoint under `experiments/embeddings_test/`.
-
-> ⚠️ **Note on GPU memory**  
-> The sweep loads encoders one after another in the same process and frees GPU memory between models. If you hit out-of-memory errors with the largest sets, run the encoders individually with `musvit embeddings run`.
-
-### Score difficulty (3-stage pipeline)
-
-Difficulty estimation runs as three stages that share the same `--dataset_name` and `--architecture` (`rnn`, `transformer` or `mlp`):
-
-```bash
-# 1. Rasterize score PDFs into per-page images.
-uv run musvit difficulty prepare-images --dataset_name fs
-
-# 2. Extract frozen-MuSViT page embeddings.
-uv run musvit difficulty embeddings --model_name PRAIG/musvit --dataset_name fs --architecture rnn
-
-# 3. Train and test the difficulty classifier head.
-uv run musvit difficulty run --model_name PRAIG/musvit --dataset_name fs --architecture rnn --fold_idx 0 --epochs 100
-```
-
-Artifacts (`PDFdifficulty/`, `difficulty_embeddings/`, `weights/`, `output/`) are written inside `experiments/difficulty/`. Stages 2-3 require a GPU; stage 1 needs the system `poppler` library (used by `pdf2image`). A SLURM launcher (`queue.sh`, `launch_experiment.slurm`) is provided for clusters.
 
 <a name=citations></a>
 ## 📖 Citations

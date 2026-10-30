@@ -1,0 +1,16 @@
+{
+  "name": "musvit-bar-review",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Local, measure-by-measure transcription workbench",
+  "scripts": {
+    "start": "cd ../.. && uv run python apps/bar_review/server.py"
+  },
+  "dependencies": {
+    "jquery": "3.7.1",
+    "smoosic": "2.0.3"
+  },
+  "overrides": {
+    "xmldom": "npm:@xmldom/xmldom@0.9.12"
+  }
+}

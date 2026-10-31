@@ -42,11 +42,11 @@ symbol detection, synthetic generation, scan degradation and Bar Review.
 | Synthetic composition | Seeded focused, combined, complete, and regression profiles; ordinary passages and feature interactions | A synthetic starting distribution, not validated coverage of real parts |
 | Canonical score | MusicXML 4.0, derived MEI, versioned codec and complete single-page pilot export/adapter | Continuation-page context export and multi-page assembly remain absent |
 | Rendering and alignment | SVG pages, optional PNG; actual measure-to-page mappings including compressed notation | Page mappings are not yet consumed by training |
-| Splits | Separate seed domains and reserved feature combinations | Need source-level split checks when adding variants and training exports |
+| Splits | Separate seed domains and reserved feature combinations; new clean-page baseline audits source/family/event-fingerprint/target/raster separation | Variant pipelines must preserve source families; tiny held-out set is not a representative benchmark |
 | Font work | Deterministic coverage sheets and glyph/fallback audits using Verovio's bundled fonts, including Petaluma | Font comparison tools are not a completed dataset augmentation pipeline |
 | Scan degradation | Retained light-copy and framed/rotated library-scan Augraphy recipes with visual notebook | Library-scan visually approved; light-copy acceptable; not calibrated or evaluated with OMR; spatial recipe has no exported source coordinate mapping |
 | Real transcription | Local Bar Review app exports reviewed crops and MusicXML | No OMR predictions; no assembled full-part export; fidelity needs manual review |
-| Training | Local pretrained MuSViT encoder plus smaller existing decoder overfit 1/1 then 8/8 complete clean pilot pages on M4/MPS; image-swap control and re-engraving checks passed | Tiny in-sample memorization only; no held-out, dense-page, degraded/handwritten or multi-page performance demonstrated |
+| Training | Tiny pilot and six dense training pages passed on M4/MPS with a frozen encoder; within-instrument image conditioning and re-engraving verified | 36-page baseline failed all 15 autonomous checks; six-page success is memorization, and generalization remains unestablished |
 | Target format | User-approved `musvit-score-v1`; fixed 614-token vocabulary, round-trip fixtures and successful pilot learning | Restricted profile; continuation-page context, editor interoperability and exact historical-layout fidelity remain unverified |
 
 Drum acceptance: user clarified that named sound/playback mappings are optional.
@@ -60,6 +60,10 @@ Important files:
 - [Target-format analysis and recommendation](experiments/full_page_omr/TARGET_FORMAT_ANALYSIS.md)
 - [Implemented score codec and fixture guide](experiments/full_page_omr/SCORE_CODEC.md)
 - [Executed overfit pilot and reproduction](experiments/full_page_omr/OVERFIT_PILOT.md)
+- [Clean held-out baseline, executed failure and next diagnostic](experiments/full_page_omr/CLEAN_BASELINE.md)
+- [Dense horn overfit and image-conditioning results](experiments/full_page_omr/DENSE_OVERFIT.md)
+- [Longer 36-page development baseline](experiments/full_page_omr/LONG_BASELINE.md)
+- [Controlled note edits and combination probes](experiments/full_page_omr/CONTROLLED_EDITS.md)
 - [Synthetic parts guide](experiments/full_page_omr/SYNTHETIC_PARTS.md)
 - [Scenario sampler](experiments/full_page_omr/scenarios.py)
 - [Generation and conversion](experiments/full_page_omr/generate_parts.py)
@@ -149,16 +153,72 @@ reasoning; evaluate assembly and continuity separately before deciding whether
 joint page encoding is needed. Do not simply concatenate pages into a larger
 image without checking readability and computation.
 
-Immediate next action: establish a source-disjoint held-out clean synthetic
-baseline, increasing notation density toward realistic single-page parts before
-scaling training or adding scan degradation. The user-approved
-[tiny overfit pilot](experiments/full_page_omr/OVERFIT_PILOT.md) succeeded on eight
-self-contained pages. Its adapter only supports page 1 of 1. Continuation-page
+The tiny overfit diagnostic was reproduced on the user's 64 GB Mac Studio M4 Max
+on 2026-10-31: 1/1 at 200 updates (5.99 seconds), then 8/8 at 1000 updates
+(71.42 seconds); image conditioning and pixel-identical re-engraving passed.
+See the [Mac Studio setup and results](experiments/full_page_omr/OVERFIT_PILOT.md#mac-studio-rerun--2026-10-31)
+for the uv environment and project-local native rendering dependencies, installed
+without admin access. These timings are training/evaluation loops, not total
+process times or controlled cross-host speed comparisons.
+
+The user-approved [first clean held-out baseline](experiments/full_page_omr/CLEAN_BASELINE.md)
+has now executed: 36 train/six validation/six test compositions, four systems per
+page, 8–16 bars. The bounded 1200-update run selected update 800 by validation
+loss, but all three sampled training pages, six validation pages and six test
+pages reached the 8192-token cap without EOS or valid scores. This is a failed
+dense-page baseline, not a demonstrated generalization gap. A six-training-page
+same-instrument image-swap diagnostic barely changed teacher-forced loss,
+suggesting weak image conditioning in this run.
+
+The follow-up [dense diagnostic](experiments/full_page_omr/DENSE_OVERFIT.md)
+passed: one 3516-token horn page at 1000 updates, then two dense horn pages at
+500 additional updates; both swapped outputs followed donor images exactly.
+All final scores stopped correctly and re-engraved pixel-for-pixel. The original
+encoder stayed frozen. This establishes image-dependent memorization on two
+pages, not note-level reading or an explanation of the failed 36-page baseline.
+
+The six-page warm-start diagnostic passed at 2400 updates (400 new presentations
+per page): 6/6 exact/valid/EOS and pixel-identical re-engraving, 6/6 swapped
+outputs exactly follow donor images within instrument. Dense piano/drum
+memorization is now established alongside horn; unseen-page reading is not.
+
+The fresh-decoder six-page comparison also passed at 2400 updates (400
+presentations/page): 6/6 exact/valid/EOS, donor-following swaps and identical
+re-engraving. Thus the horn warm-start was unnecessary for this seed and subset;
+this is still memorization, not a controlled explanation of the 36-page failure.
+
+The [longer 36-page development run](experiments/full_page_omr/LONG_BASELINE.md)
+completed 14400 updates (400 presentations/page). Final checkpoint: sampled
+training pages 3/3 exact/valid, validation 0/6 valid; all reached EOS. Selected
+update-4800 checkpoint: training sample 0/3 valid, validation 0/6 valid. Final
+checkpoint now demonstrates a sampled generalization gap. Field diagnostics show
+validation pitch-step accuracy about 15% and duration-value accuracy about 51%
+with gold prefixes; image swaps barely affect validation CE.
+
+The controlled one-note pair also passed (2/2 exact, swaps and re-engraving at
+500 updates), showing that frozen features preserve that small pitch distinction.
+Two untrained edits failed transfer: the model reproduced memorized scores.
+See [controlled edits](experiments/full_page_omr/CONTROLLED_EDITS.md).
+
+The four-edit composition diagnostic completed: 5/5 trained controls and swaps
+passed; 5/7 untrained combinations were exact. The two failures each missed one
+pitch edit; all outputs were valid and stopped correctly. This shows limited
+composition of learned visual distinctions within a memorized page, not reading
+of unseen compositions.
+
+Work stopped at the user's explicit request after this run, due to credits and
+availability. All experiment processes completed; no further runs are queued.
+Do not start further experiments until the user returns and reauthorizes them.
+Proposed next action then: review the controlled-edit results and increase clean
+training-composition diversity with fixed validation before changing architecture.
+No larger dataset or follow-up training run has been started.
+Do not tune against the reported test outputs. The adapter still supports only
+page 1 of 1. Continuation-page
 context, cross-page references and assembly remain separate work; do not cut
 full-part tokens at page boundaries. Retain bekern as a baseline and preserve
 semantic source scores rather than deriving canonical labels from rendering.
 
-Other training details to revisit before a pilot: the current entrypoint defaults
+Other training details for the older general entrypoint: it defaults
 to older `carlospm12/LSMT-MAE-Base-1024-16` weights, hard-codes a maximum target
 length of 7512, and validates every 3500 epochs. Select and record explicit weights,
 check target lengths, and use a useful validation interval for the small pilot.
@@ -713,6 +773,348 @@ check target lengths, and use a useful validation interval for the small pilot.
 - Exact next action: build a source-disjoint clean synthetic evaluation set with
   more realistic single-page density, keep source families/variants together,
   and report recognition/structural errors before adding fonts or scan effects.
+
+### 2026-10-31 - Reproduce overfit diagnostic on Mac Studio
+
+- User requested rerunning the last experiment before increasing scale on the
+  new Mac Studio M4 Max (16 CPU/40 GPU cores, 64 GB, macOS 26.6.2).
+- Copied `.venv` pointed at the previous user's Python. Preserved it under
+  `experiments/full_page_omr/outputs/studio_setup_20261031/previous_machine_venv/`.
+  User installed uv; `uv sync --locked --python 3.11.11` created a fresh `.venv`
+  with 119 Python packages including PyTorch 2.9.1. No lockfile changes.
+- No admin/Homebrew access. Installed native Cairo 1.18.6 and HarfBuzz 15.0.0
+  locally using temporary micromamba into `outputs/studio_setup_20261031/native/`
+  under the full-page experiment. Python packages remain uv-managed. Saved exact
+  native package URLs and an `activate_rendering.sh` helper alongside that native
+  directory. No credentials copied into project artifacts or documentation.
+- Historical Hugging Face config download initially returned HTTP 401; after
+  user login, downloaded the exact recorded revision's config through the hub
+  client to `outputs/studio_setup_20261031/encoder/config.json`. Root encoder
+  weights matched the original SHA-256. No weight download or replacement needed.
+- External probe confirmed MPS allocation. Exported eight new pages to
+  `outputs/overfit_pages_studio_20261031_02/`; preserved incomplete `_01` export
+  from discovery of missing HarfBuzz. Prior host's pilot exports were absent;
+  no cross-host image-byte comparison claimed. Target lengths match the report.
+- Executed original bounded recipe: seed 7, 1024, frozen encoder, width-128
+  two-layer decoder, batch size 1, lr 0.001; one stage max 1500/every 100,
+  eight stage max 4000/every 200, warm-start only adaptor/decoder from one stage.
+  New runs `outputs/overfit_one_studio_mps_20261031_01/` and
+  `outputs/overfit_eight_studio_mps_20261031_01/` succeeded at 200 and 1000 updates.
+  Training/evaluation/control loops took 5.99 and 71.42 seconds, excluding startup,
+  caching and initial evaluation. Different numerical trajectory/update count
+  means these are not controlled GPU speed measurements.
+- All final outputs exact including EOS, zero token error, valid XML and matching
+  inspected semantics. Cyclic swap: 0/8 against original, independently verified
+  8/8 against donor-image targets. Actual saved prediction XML re-engraved exactly
+  against fresh inputs (1/1 and 8/8). Saved checks, reports and checkpoints in
+  new ignored runs; original weights and prior outputs preserved.
+- Validation: final full suite ran 63 tests, 62 passed/one sandbox MPS skip;
+  actual external MPS training/backward/cache checks passed. Before native setup
+  completed, initial suite had one import error and four skips; final complete
+  rerun supersedes it. Full logs, native spec and configs remain ignored. Updated
+  `OVERFIT_PILOT.md` with environment, results and measurement limits. No training
+  code changed; this still establishes only sparse in-sample memorization.
+- Exact next action: build the source-disjoint clean synthetic baseline with
+  realistic single-page density described above; no larger run started here.
+
+### 2026-10-31 - Start source-disjoint clean page baseline
+
+- User approved trying denser held-out pages. Added `clean_page_data.py`,
+  `clean_page_experiment.py`, `CLEAN_BASELINE.md` and five focused tests; extended
+  the pilot adapter to support explicit train/validation/test splits while retaining
+  its default overfit contract. Prior uncommitted diary/report work preserved.
+- Exported `experiments/full_page_omr/outputs/clean_pages_v1_20261031_01/`, seed 71:
+  36 train/six validation/six test, equally divided among horn/piano/drums. All 48
+  complete pages have four systems (16 horn/drum bars or eight piano bars);
+  target lengths 2881–6408. Source/family/fingerprint/target/raster collision
+  checks, source/target semantic round trips and visible measure checks passed.
+  Inspected one training PNG per instrument in the separate nine-page probe.
+- This first baseline intentionally restricts notation to 4/4, C major and a
+  small shared feature distribution; no reserved scenario feature pairs, repeats,
+  key changes or scan effects. It is a step toward realistic pages, not full
+  collection coverage. No generated artifacts added to version control.
+- Executed 1200 updates, seed 7, fresh width-128/two-layer decoder/adaptor,
+  frozen original encoder, 1024 RGB inputs, AdamW lr 0.001, fixed 8192-token
+  cap. Training took 94.37 seconds; minimum validation teacher loss selected
+  update 800. At this intermediate observation, all three sampled training-page
+  greedy outputs reached the cap without EOS and were invalid. This does not
+  demonstrate recognition; validation/test autonomous scoring is still running.
+- Run: `outputs/clean_baseline_mps_v1_20261031_01/`; shell log:
+  `outputs/studio_setup_20261031/clean_training.log` (both under full-page OMR).
+  Tests: 68 ran, 67 passed/one sandbox MPS skip. Actual MPS training/backward
+  and cached/full-prefix checks executed. Full test log is alongside the shell log.
+- Exact resume action if interrupted: inspect this run's `result.json` and
+  training log/process before launching anything else; finish recording all held-out
+  metrics in `CLEAN_BASELINE.md`. Do not overwrite/retrain this run or tune against
+  its test set. A completion entry will record final evaluation and next action.
+
+### 2026-10-31 - Complete first clean held-out baseline
+
+- Finished the run documented in the preceding start entry. All 15 autonomous
+  predictions failed: training sample 0/3 exact/valid/EOS, validation 0/6, test
+  0/6. Each hit 8192 tokens and degenerated into repeated closing-element tokens.
+  Independently checked saved predictions and final summaries. No outputs could
+  be structurally scored or re-engraved; empty valid-subset count sums are not
+  evidence of zero musical errors.
+- Token edit error: training sample 164.80%, validation 170.80%, test 162.21%;
+  these can exceed 100% because of inserted runaway tokens and are not note-error
+  percentages. Autonomous evaluation took 393.05 seconds, after the 94.37-second
+  training loop. No time cap hit, OOM, or CPU fallback. Peak process RSS
+  2,540,716,032 bytes; final sampled MPS driver allocation 38,021,398,528 bytes,
+  not a measured GPU peak. Original encoder remained frozen and unchanged.
+- Selected update-800 teacher CE / next-token accuracy: train 0.924806 / 71.33%,
+  validation 0.940419 / 71.25%, test 0.947605 / 71.00%. Correct preceding tokens
+  were supplied for these diagnostics; they do not establish transcription quality.
+- Added and executed `clean_page_conditioning.py` after checkpoint selection and
+  all test scoring, using only the first six training pages. Within-instrument
+  image swaps changed teacher CE from 0.917514 to 0.921012 (+0.003498), accuracy
+  71.341% to 71.281%. Inference: weak conditioning in this particular control;
+  not proof of complete image independence. No training/selection changes followed
+  test results. Saved pairs and checkpoint hash in `conditioning_teacher.json`.
+- Updated current state and `CLEAN_BASELINE.md` with complete configs, results,
+  code/CLI links, limitations and interpretation; linked it from the tiny pilot.
+  Full suite passed 67 tests with one sandbox MPS skip; real GPU training,
+  cached/full-prefix agreement and conditioning CLI passed. Documentation links
+  and whitespace checked. No code/data commit, scan effects or larger run.
+- Proposed exact next action: run a one-dense-training-page overfit diagnostic,
+  resolve output-length/grammar/optimization/capacity and image-conditioning
+  failures there, then revisit held-out recognition using validation for selection.
+  The user has approved/executed this first baseline; this next diagnostic remains
+  a proposal rather than a claim of progress or an agreed architecture change.
+
+### 2026-10-31 - Dense sequence and image-conditioning diagnostics
+
+- Continued from the failed clean baseline and encoder question. Reused the
+  existing training split; no dataset export or validation/test tuning. Preserved
+  prior uncommitted work and all previous artifacts.
+- Extended `overfit_pilot.py` with explicit training-split indices, a fixed token
+  cap and separate teacher metrics. Updated `pilot_review.py` to use evaluated
+  record names and manifest rendering settings. Architecture/weights unchanged.
+- Executed on MPS with seed 7, original frozen encoder, width-128/two-layer
+  decoder, lr 0.001, 1024 inputs and fixed 8192 decoding cap. One-page bound
+  3000/every 500; two-page bound 4000/every 500, warm-start adaptor/decoder only.
+- `outputs/dense_one_mps_20261031_01/`: training index 0, 3516 tokens, exact valid
+  score/EOS at update 1000, 71.62-second loop. At 500 it stopped but was invalid.
+- `outputs/dense_two_mps_20261031_01/`: indices 0/3, 3516/3561 tokens, 2/2 exact
+  valid scores/EOS at 500 additional updates, 71.32-second loop including swaps.
+  Swapped outputs matched donor transcripts 2/2, original labels 0/2; checked
+  saved arrays independently. Both encoders remained frozen. See
+  [DENSE_OVERFIT.md](experiments/full_page_omr/DENSE_OVERFIT.md) for full evidence,
+  timings, limits, reproduction and paths (all outputs under full-page OMR).
+- Re-engraved actual final XML: one-page 1/1 and two-page 2/2 pixel-identical.
+  Visually inspected the reconstructed first horn page. Full suite 67 passed,
+  one sandbox MPS skip; real GPU training/cache checks passed. Rendering, CLI,
+  compilation and whitespace checks passed. No commit or encoder adaptation.
+- Interpretation: long sequence memorization and image-dependent selection can
+  work with this encoder. Dataset size, per-page exposure and warm-start curriculum
+  differ from the failed baseline; this does not isolate its cause or establish
+  note-level reading/generalization. Explained image swapping at user request.
+- Proposed exact next action: bounded six-page training-only overfit, indices
+  0–5, two examples per instrument, frozen encoder initially; measure autonomous
+  validity/EOS and within-instrument swaps while recording per-page exposure.
+
+### 2026-10-31 - Start authorized six-page diagnostic
+
+- User approved the bounded six-page training-only overfit. Started MPS run
+  `experiments/full_page_omr/outputs/dense_six_mps_20261031_01/`, reusing clean
+  training indices 0–5, lengths 3516/3652/5880/3561/3706/6311. No new data export.
+- Fixed bound 6000 updates/every 1200, at most 1000 new presentations per page;
+  warm-start two-page adaptor/decoder with fresh AdamW optimizer, frozen encoder,
+  unchanged width 128/two layers, seed 7, lr 0.001, 1024 input, 8192 token cap.
+- Added within-instrument donor selection `[3,4,5,0,1,2]`, donor exactness and
+  per-page presentation counts to the runner. Freed training logits/loss after
+  each step. No architecture, attention, data or optimizer changes.
+- Full suite: 69 ran, 68 passed and one sandbox MPS skip. Added a test that swaps
+  preserve instrument, change every image, cover each donor and reject singleton
+  groups. Log `/private/tmp/musvit-six-tests.log`; whitespace check passed.
+- Exact resume action: inspect `result.json` and
+  `outputs/studio_setup_20261031/dense_six_training.log` under full-page OMR,
+  finish/save independent swap verification and prediction re-engraving, then
+  record final results. No success or failure result is claimed in this entry.
+
+### 2026-10-31 - Preserve partial run and retry MPS memory management
+
+- User authorized continued follow-up experiments based on results and ongoing
+  diary updates. No additional permission is needed to choose the next diagnostic.
+- Six-page `_01` initial evaluation took 295.31 seconds: only the two horn pages
+  were exact/valid. Observed substantial system memory compression and swap;
+  inference slows as variable-sized K/V tensors leave unused MPS allocations.
+  This is a suspected allocator-pressure contribution, not a controlled timing
+  attribution. Sent SIGINT to this run only. Contrary to the initial intention
+  to stop before training, evaluation finished while diagnosing and at least 200
+  updates executed before interruption (last logged update 200, no checkpoint).
+  All partial output/log files remain intact; no final-result claim for `_01`.
+- Added release of unused MPS cache before each page and every 256 nonterminal
+  decoding steps, plus per-page progress logging. Live tensors, attention math,
+  model and optimizer are unchanged. Seven focused tests passed; real MPS retry
+  will exercise allocator calls. This change is recorded in the run config/hash.
+- Started fresh `_02` with exactly the same bound/seed/warm-start/data and log
+  `outputs/studio_setup_20261031/dense_six_training_02.log`. Exact next action:
+  finish this run, compare initial token arrays against `_01`, then verify final
+  donor matching/re-engraving and decide the next experiment from evidence.
+
+### 2026-10-31 - Complete six-page overfit and start fresh-decoder comparison
+
+- `_02` completed at update 2400, 400 new presentations/page: all six horn/piano/
+  drum pages exact, valid, semantically identical and correct EOS. At update
+  1200 none was exact/valid despite 97.735% teacher next-token accuracy.
+- Final teacher CE 0.000249847/100% accuracy. Within-instrument swaps matched
+  donor targets 6/6, original targets 0/6; independently checked saved arrays.
+  Actual saved XML re-engraved pixel-identically for all six. No repair/grammar
+  masks, target-length stopping, encoder fine-tuning or held-out scoring.
+- Loop including evaluations/swap: 436.66 seconds; initial evaluation 112.74
+  seconds excluded. Peak RSS 1,263,353,856 bytes; final sampled MPS allocation
+  3,555,688,448 bytes, not GPU peak. All six initial token arrays exactly matched
+  interrupted `_01`. Cache release materially reduced observed memory pressure;
+  timing is not a controlled allocator benchmark.
+- Reports/checkpoints are under `outputs/dense_six_mps_20261031_02/` (full-page
+  OMR), including independent `conditioning_check.json`, cache equivalence and
+  `reengraved/report.json`. See DENSE_OVERFIT.md for reproduction and limits.
+- Under user's continued-work authorization, started fresh-decoder comparison
+  `outputs/dense_six_fresh_mps_20261031_01/`: identical six pages, seed 7, frozen
+  encoder, optimizer/architecture, 6000 bound and 1200 interval, no warm-start.
+  Log `outputs/studio_setup_20261031/dense_six_fresh_training.log`.
+- Exact next action: finish and verify the fresh run; compare convergence and
+  donor fidelity before deciding how to revisit the 36-page baseline. A single
+  seed comparison cannot establish a general curriculum advantage.
+
+### 2026-10-31 - Queue longer 36-page development run
+
+- User will be away about an hour and requested approval for a longer run now.
+  Requested/received GPU execution approval for a queued bounded 36-page run.
+  Queue script is ignored at `outputs/studio_setup_20261031/run_long_after_six.py`
+  under full-page OMR. It waits at most 30 minutes for the fresh-six result and
+  launches only if all six predictions and all six donor matches pass.
+- Planned run `outputs/clean_long_mps_20261031_01/`: same 36 training/six
+  validation pages, fresh decoder, frozen encoder, seed 7, original lr/model/
+  resolution/token cap. Bound 14400 updates (400 presentations/page), 1800-second
+  training-loop limit, validation every 200 as in original baseline. No test
+  target loading/scoring. New `--skip-test` and `--evaluate-last` flags keep
+  validation selection and final-checkpoint learning diagnostics separate.
+- Added per-page exposure to the clean runner's report; both selected and last
+  checkpoint evaluate the same first three training pages and six validation
+  pages. Full suite after changes: 69 ran, 68 passed/one sandbox MPS skip, log
+  `/private/tmp/musvit-long-full-tests.log`; CLI/help and whitespace checked.
+- Exact next action: finish fresh-six verification; watch queued baseline log
+  `outputs/studio_setup_20261031/clean_long_training.log`, then record results
+  for each checkpoint separately. Do not infer that the queued run has started
+  until its config/log exists. Preserve interrupted/earlier artifacts.
+
+### 2026-10-31 - Fresh six-page success; longer baseline started
+
+- Fresh six-page run completed at update 2400, 400 presentations/page: 6/6 exact,
+  valid, semantic-equal, correct EOS, within-instrument donor matches and
+  pixel-identical re-engraving. Independently checked saved swapped arrays;
+  reports at `outputs/dense_six_fresh_mps_20261031_01/` under full-page OMR.
+- At 1200 all six outputs reached cap despite 98.696% teacher accuracy. At 2400
+  teacher CE 0.000320018, 100% accuracy. Loop 506.55 seconds including evaluations/
+  swaps, excluding initial eval 74.90 seconds. Peak RSS 1,263,779,840 bytes;
+  final sampled MPS allocation 3,564,077,056 bytes, not GPU peak. Encoder frozen.
+- Both warm-start and fresh runs first passed at the 2400 evaluation checkpoint;
+  exact convergence could have occurred earlier between checks. This one-seed
+  result shows the curriculum is unnecessary here, not equal convergence speed
+  or broad encoder adequacy. Visually inspected warm-run piano/drum re-engraving.
+- The approved queue started `outputs/clean_long_mps_20261031_01/`; training
+  updates observed in log. Declared recipe and command in LONG_BASELINE.md.
+- Exact next action: monitor the 14400-update/1800-second bound, then distinguish
+  training and validation behavior at each checkpoint; leave tests untouched.
+
+### 2026-10-31 - Complete longer baseline and analyze field errors
+
+- Long run completed 14400 updates/400 presentations per page in 1099.43 seconds
+  of training/validation/checkpoint work; no time cap hit. Selected update 4800.
+  Final checkpoint training sample 3/3 exact/valid/EOS; validation 0/6 valid,
+  6/6 EOS, 30.267% token edit error. Selected checkpoint training 0/3 valid,
+  validation 0/6 valid with 28.027% token error; all stopped. Test untouched.
+- Final train gold-prefix accuracy 100% across all 36 does not establish all 36
+  autonomous predictions. Selected/final validation CE 0.339914/0.663299;
+  accuracy 92.355%/92.525%. Details, timings, memory, saved curves and limitations
+  recorded in LONG_BASELINE.md. Original frozen encoder unchanged.
+- Added `clean_page_diagnostics.py` and a field-role test. CPU post-run analysis
+  verifies inputs/checkpoints and evaluates first six train/all six validation
+  pages; CPU validation CE agrees with MPS within 0.000001. Selected/final train
+  swap CE increase +0.070325/+0.172425; validation -0.002672/+0.004292. Pitch-step
+  accuracy only 15.38%/14.57%; duration-value accuracy 50.89%/51.06% on validation.
+  These are gold-prefix field tokens, not autonomous note accuracy.
+- First-divergence audit found musical-value/dynamics/instruction errors and
+  one early piano canonical-divisions error (2 predicted vs 1). Only one of 36
+  training targets uses divisions 1; others use 2. Minimal divisions depend on
+  whole-part rhythms. No codec/target change; this does not explain all failures.
+- Added `dense_contrast.py`: derives two pages from training horn 0, changes only
+  measure 1 note 2 from C5 to D5. Exactly one target-token difference (index 183),
+  240 raster pixels in bbox [278,82,294,137]; regenerated base matches parent
+  pixels. Export `outputs/dense_contrast_pages_20261031_01/` is new, immutable.
+  Extended pilot exporter to accept explicit scores/render settings and recorded
+  XML-ID seed; existing default export preserved. Review helper respects seed.
+- Started authorized bounded contrast run `outputs/dense_contrast_mps_20261031_01/`,
+  warm-start final long-run adaptor/decoder, fresh optimizer, seed 7, frozen
+  encoder, unchanged lr 0.001/width 128/two layers/8192 cap, 2000/every 500.
+  Log `outputs/studio_setup_20261031/dense_contrast_training.log`.
+- Focused tests after diagnostics/export changes: 13 passed, including role
+  separation and existing export/gradient/cache tests. Export assertions checked
+  one-token difference, source semantics and localized raster change. Exact next
+  action: finish contrast run, independently verify changed-token and swap results,
+  re-engrave valid predictions, and record what it does/does not isolate.
+
+### 2026-10-31 - One-note contrast passes; unseen edits fail; test combinations
+
+- Controlled pair completed at 500 updates (250 presentations/page): 2/2 exact,
+  valid, semantic-equal/EOS and pixel-identical re-engraving. Swapped tokens
+  independently matched donors 2/2. Loop 76.26 seconds, frozen encoder unchanged.
+  This demonstrates preserved information for this local pitch distinction.
+- New immutable transfer export contains trained controls and two untrained edits:
+  C5→E5 at the same position and A4→B4 at another position. Exactly one changed
+  target token each; 373/349 localized raster pixels. Evaluation-only run
+  `outputs/dense_transfer_eval_20261031_01/` reproduced both trained controls,
+  but unseen-pitch output exactly matched the memorized D5 score and unseen-
+  position output exactly matched base. All valid/EOS; no transfer learning.
+- Added evaluation-only `dense_contrast_eval.py` (checkpoint/data/encoder identity
+  checks); then generalized known-output reporting to all trained control names.
+  Details and reproduction recorded in CONTROLLED_EDITS.md. Full suite before
+  the subsequent composition helper: 70 ran, 69 passed/one sandbox MPS skip.
+- Started the next authorized probe: `dense_composition.py` exports base plus four
+  individual edits (one per system) as five training records and seven untrained
+  combinations (six pairs plus all four). Every combined image's difference mask
+  exactly equals the union of individual masks; target differences equal active
+  edit count, other tokens unchanged. No original validation/test targets used.
+- Dataset `outputs/dense_composition_pages_20261031_01/`, training run
+  `outputs/dense_composition_mps_20261031_01/`, evaluation-only run queued at
+  `outputs/dense_composition_eval_20261031_01/` (all full-page OMR). Train first
+  five records only, original frozen encoder, fresh optimizer from final long
+  decoder, seed 7/lr 0.001/width 128/two layers/8192 cap, bound 2000/every 1000.
+- Limitation declared before scoring: training at most one edit creates a
+  correlation that could hinder combination transfer; failure would not prove
+  an architectural inability. Exact next action: verify trained controls and
+  donor swaps, score the seven untrained combinations, document each separately.
+
+### 2026-10-31 - Complete composition check and stop at user's request
+
+- User clarified the purpose of overfit diagnostics and need for more data.
+  Explained that overfit validates basic pipeline/learning capability, not
+  architecture optimality or generalization; more varied training is likely
+  necessary but not a guaranteed solution. User then explicitly requested ending
+  after the current run due to credits and inability to approve more work.
+- Finished only the already-running composition experiment and its queued
+  evaluation. Training stopped at update 1000/200 presentations per page:
+  5/5 exact/valid/EOS, 5/5 donor-following swaps independently verified. Loop
+  161.75 seconds; original frozen encoder unchanged.
+- Evaluation-only: 5/7 untrained combinations exact, plus all five controls.
+  All 12 valid/EOS at 3516 tokens. Pair 2+3 and all-four each missed only edit 3,
+  emitting original F instead of E at index 1754 (measure 9 note 2). Other
+  tokens identical; independent audit saved in evaluation directory. Successful
+  combinations did not exactly match any training control. Eval 135.44 seconds.
+- Evidence now includes limited composition of learned local changes, beyond
+  whole-score lookup, but only in a memorized page. Sparse training correlations
+  remain a confound; no source-disjoint reading capability is established.
+  Details/artifacts/reproduction and evidence limits in CONTROLLED_EDITS.md.
+- Final regression suite: 70 ran, 69 passed/one sandbox MPS skip; actual GPU
+  runs and data/hash/semantic/local-raster/combination-mask/token checks passed.
+  CLI/compilation and whitespace checked. No generated data or weights committed;
+  original uncommitted work preserved. No extra composition re-engraving claimed.
+- Stopped with all runs complete and no queued follow-up. No 180-page or other
+  expanded dataset/run was created. Exact next action, only after user returns
+  and reauthorizes: review results, then plan controlled data-diversity scaling
+  with fixed validation. Do not resume GPU experiments automatically.
 
 ### Entry template
 

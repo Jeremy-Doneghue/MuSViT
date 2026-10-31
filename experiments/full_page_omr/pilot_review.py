@@ -15,7 +15,9 @@ def review(dataset, run):
 
     dataset, run = Path(dataset), Path(run)
     result = json.loads((run / "result.json").read_text())
-    records = json.loads((dataset / "manifest.json").read_text())["records"][:result["final"]["count"]]
+    manifest = json.loads((dataset / "manifest.json").read_text())
+    by_name = {r['name']: r for r in manifest['records']}
+    records = [by_name[e['name']] for e in result['final']['examples']]
     predictions = run / f"eval_{result['final']['step']:05d}"
     output = run / "reengraved"
     output.mkdir(exist_ok=False)
@@ -28,9 +30,11 @@ def review(dataset, run):
             continue
         xml = source.read_text()
         toolkit = verovio.toolkit()
-        toolkit.setOptions({"inputFrom": "musicxml", "breaks": "encoded" if "<print" in xml else "auto",
+        toolkit.setOptions(manifest.get('render_options') or {"inputFrom": "musicxml", "breaks": "encoded" if "<print" in xml else "auto",
                             "pageWidth": 2100, "pageHeight": 2970, "scale": 40,
                             "header": "none", "footer": "none"})
+        if 'renderer_xml_id_seed' in manifest or manifest.get('recipe') == 'clean-page-v1':
+            toolkit.resetXmlIdSeed(manifest.get('renderer_xml_id_seed',0))
         if not toolkit.loadData(xml) or toolkit.getPageCount() != 1:
             raise ValueError("predicted score is not a renderable single page")
         svg = toolkit.renderToSVG(1).replace('overflow="inherit"', 'overflow="visible"')

@@ -164,7 +164,92 @@ tests cover correct shifts/backward gradients, frozen encoder, cached/full-prefi
 logits, EOS/truncation, data identity/visibility and export refusal. Existing
 codec/render/model tests continue to pass.
 
+## Mac Studio rerun — 2026-10-31
+
+User requested the same diagnostic after moving to a Mac Studio: Apple M4 Max,
+16 CPU cores, 40 GPU cores, 64 GB unified memory, macOS 26.6.2. No model,
+training-code, vocabulary or dependency-lock changes were made for this rerun.
+
+The copied `.venv` referenced the previous machine's Python. Preserved it at
+`outputs/studio_setup_20261031/previous_machine_venv/` and created a new `.venv`
+with `uv sync --locked --python 3.11.11` (119 Python packages, PyTorch 2.9.1).
+Downloaded only `config.json` from the original encoder revision after the user
+logged into Hugging Face; root weights already existed and matched the SHA-256
+above. The configuration is at
+`outputs/studio_setup_20261031/encoder/config.json`, SHA-256
+`3acc4b8ba1f4a9990263de1494dd6ebbff78ffb861ecf6c6098618bbd8152097`.
+
+Native Cairo and HarfBuzz are also required by the existing renderer. This account
+has no admin access or Homebrew. Installed Cairo 1.18.6 and HarfBuzz 15.0.0 plus
+their native dependencies using a temporary micromamba executable into
+`outputs/studio_setup_20261031/native/`. Python packages remain managed by uv;
+no global native installation was required. The exact native package URLs are
+saved in `outputs/studio_setup_20261031/native-explicit.txt`. For this checkout,
+activate rendering paths from the repository root before reproducing commands:
+
+```sh
+source experiments/full_page_omr/outputs/studio_setup_20261031/activate_rendering.sh
+```
+
+This sets `PATH`, `DYLD_FALLBACK_LIBRARY_PATH` and `MPLCONFIGDIR`. The older
+`/opt/homebrew/lib` examples above apply to the previous host. MPS still needs
+execution outside the agent sandbox; the external allocation probe passed.
+
+Fresh dataset: `outputs/overfit_pages_studio_20261031_02/`. The `..._01/` export
+stopped when the missing HarfBuzz CLI was discovered and was preserved. Final
+export contains the same eight pilot compositions with target lengths
+264, 264, 294, 288, 397, 397, 510, 510. Native rendering dependencies differ from
+the previous host; prior dataset artifacts are absent here, so cross-host raster
+byte identity was not checked.
+
+Rerun results, using the same seed 7, 1024 resolution, frozen encoder, decoder,
+optimizer and evaluation intervals as the original commands:
+
+| Stage | Exact predictions | Updates | Training/evaluation loop |
+| --- | --- | --- | --- |
+| One example | 1/1 | 200 | 5.99 seconds |
+| Eight examples | 8/8 | 1000 | 71.42 seconds |
+
+Runs: `outputs/overfit_one_studio_mps_20261031_01/` and
+`outputs/overfit_eight_studio_mps_20261031_01/`. The eight-example stage loaded
+only the one-example adaptor/decoder checkpoint with a fresh optimizer. Initial
+exact count was 1/8, then 0/8 at updates 200 and 400, 2/8 at 600, 3/8 at 800,
+and 8/8 at 1000. Sampled loss went from 6.44542 to 0.00766906 in the one-example
+stage and 2.93936 to 0.00216271 in the eight-example stage (final 25-update mean
+0.00135307). These are training losses, not generalization measurements.
+
+All final outputs reached correct EOS without truncation, had zero token error,
+decoded into valid MusicXML and matched inspected semantics. The cyclic swap
+gave 0/8 exact against original targets and 8/8 against donor-image targets
+(independently checked in `conditioning_check.json`). Actual prediction XML
+re-engraved pixel-for-pixel against this host's fresh inputs: 1/1 and 8/8 at
+1400px width, recorded in each run's `reengraved/report.json`.
+
+The loop timings exclude initialization, feature caching and initial evaluation;
+the eight-example loop includes its final swap check. Initial evaluation took
+2.08/6.68 seconds; host-timed feature caching took 0.72/2.17 seconds. Peak process
+RSS was 1,204,535,296/1,287,766,016 bytes. Final sampled MPS driver allocations
+were 1,501,937,664/2,598,682,624 bytes, not GPU peaks. Both encoders remained
+frozen. Numerical trajectories differed across hosts and convergence occurred at
+different update counts, so elapsed times are not a controlled GPU speed test.
+
+Validation after native setup: 63 tests ran in 5.39 seconds, 62 passed and the
+sandbox MPS unit test skipped. Actual MPS training/backward and incremental-cache
+checks passed in both external runs. Log:
+`outputs/studio_setup_20261031/tests_with_native.log`. Before HarfBuzz was added,
+the initial test discovery failed importing the pilot tests and skipped three
+font tests; the complete rerun above supersedes that attempt. No dense-page or
+held-out experiment was started.
+
 ## Limits
+
+The follow-up [dense-page diagnostic](DENSE_OVERFIT.md) applies this runner to
+selected training pages from the clean baseline, with a fixed decoding cap.
+
+The subsequent [clean held-out baseline](CLEAN_BASELINE.md) increased to 8–16 bars
+and four systems per page. Its first bounded run failed autonomous transcription
+even on sampled training pages; the tiny successes above do not transfer to that
+setting automatically.
 
 Success on these pages establishes an in-sample pipeline diagnostic only. It
 does not establish handwritten/degraded-scan recognition, unseen notation/text,

@@ -115,18 +115,39 @@ def greedy(model, features, maxlen):
         tokens.append(next_token)
         if next_token == W2I["<eos>"]:
             break
+        # Growing K/V tensors leave differently sized inactive MPS allocations.
+        # Release only unused allocator blocks; live tensors remain unchanged.
+        if features.device.type == 'mps' and (position + 1) % 256 == 0:
+            torch.mps.empty_cache()
     return tokens
 
 
+def swap_indices(records, within_kind=False):
+    if not within_kind:
+        return [(i + 1) % len(records) for i in range(len(records))]
+    groups = {}
+    for i, record in enumerate(records):
+        groups.setdefault(record['kind'], []).append(i)
+    if any(len(group) < 2 for group in groups.values()):
+        raise ValueError('within-kind swaps require at least two pages per instrument')
+    donors = list(range(len(records)))
+    for group in groups.values():
+        for i, donor in zip(group, group[1:] + group[:1]):
+            donors[i] = donor
+    return donors
+
+
 @torch.inference_mode()
-def evaluate(model, features, targets, records, output, step, swapped=False):
+def evaluate(model, features, targets, records, output, step, swapped=False, donors=None):
     model.eval()
     folder = output / (f"eval_{step:05d}" + ("_swapped" if swapped else ""))
     folder.mkdir(exist_ok=False)
     results = []
     started = time.perf_counter()
     for index, (target, record) in enumerate(zip(targets, records)):
-        feature_index = (index + 1) % len(features) if swapped else index
+        if features[index].device.type == 'mps':
+            torch.mps.empty_cache()
+        feature_index = (donors or swap_indices(records))[index] if swapped else index
         prediction = greedy(model, features[feature_index], model.maxlen)
         valid, semantic_equal, error = False, False, None
         name = record["name"]
@@ -141,13 +162,18 @@ def evaluate(model, features, targets, records, output, step, swapped=False):
                          target_name=name, image_name=records[feature_index]["name"], error=error)
         (folder / f"{name}.json").write_text(json.dumps(predicted, indent=2))
         results.append(dict(name=name, image_name=records[feature_index]["name"],
-                            exact=prediction == target, valid_score=valid, semantic_equal=semantic_equal,
+                            exact=prediction == target, donor_exact=prediction == targets[feature_index],
+                            valid_score=valid, semantic_equal=semantic_equal,
                             token_error=editdistance.eval(prediction, target) / len(target),
                             predicted_length=len(prediction), target_length=len(target),
                             eos=prediction[-1] == W2I["<eos>"], truncated=prediction[-1] != W2I["<eos>"],
                             error=error))
+        print(json.dumps(dict(decoded=name, image_name=records[feature_index]['name'],
+                              exact=prediction == target, tokens=len(prediction),
+                              seconds=time.perf_counter() - started)), flush=True)
     summary = dict(step=step, swapped=swapped, exact=sum(x["exact"] for x in results),
                    valid=sum(x["valid_score"] for x in results), semantic_equal=sum(x["semantic_equal"] for x in results),
+                   donor_exact=sum(x['donor_exact'] for x in results),
                    count=len(results), seconds=time.perf_counter() - started, examples=results)
     (folder / "summary.json").write_text(json.dumps(summary, indent=2))
     print(json.dumps({k: v for k, v in summary.items() if k != "examples"}), flush=True)
@@ -163,9 +189,16 @@ def train(args):
     device = torch.device(args.device)
     if device.type == "mps" and not torch.backends.mps.is_available():
         raise RuntimeError("MPS unavailable in this execution context; run with GPU access or explicitly select cpu")
-    data = PilotDataset(args.dataset, args.resolution, args.limit)
+    data = PilotDataset(args.dataset, args.resolution,
+                        max(args.indices) + 1 if args.indices else args.limit, split=args.split)
+    if args.indices:
+        data.records = [data.records[i] for i in args.indices]
+        data.samples = [data.samples[i] for i in args.indices]
     targets = [ids.tolist() for _, ids in data.samples]
-    maxlen = max(map(len, targets)) + 32
+    donors = swap_indices(data.records, args.swap_within_kind)
+    maxlen = args.max_tokens or max(map(len, targets)) + 32
+    if max(map(len, targets)) > maxlen:
+        raise ValueError("target exceeds decoding cap; never truncate labels")
     encoder = local_encoder(args.encoder_weights, args.encoder_config)
     model = make_model(encoder, args.resolution, maxlen, args.width, args.layers).to(device)
     if args.start_from:
@@ -186,7 +219,10 @@ def train(args):
                   torch=torch.__version__, started_utc=datetime.now(timezone.utc).isoformat(),
                   augmentation=False, token_corruption=False, decoder_dropout=0, batch_size=1,
                   raw_encoder_feature_cache=True, image_normalization="RGB [0,1], bilinear square resize",
-                  target_lengths=[len(t) for t in targets], warm_start_sha256=sha256(args.start_from) if args.start_from else None)
+                  target_lengths=[len(t) for t in targets], selected_names=[r['name'] for r in data.records],
+                  swap_donor_indices=donors,
+                  mps_cache_release='before each page and every 256 nonterminal decode steps',
+                  warm_start_sha256=sha256(args.start_from) if args.start_from else None)
     (output / "config.json").write_text(json.dumps(config, indent=2))
     model.eval()
     features = []
@@ -212,6 +248,7 @@ def train(args):
     initial = evaluate(model, features, targets, data.records, output, 0)
     history = output / "training.jsonl"
     order, losses, last = [], [], initial
+    presentations = [0] * len(data)
     started = time.perf_counter()
     for step in range(1, args.steps + 1):
         if not order:
@@ -230,23 +267,31 @@ def train(args):
         nn.utils.clip_grad_norm_([p for p in model.parameters() if p.requires_grad], 1.0)
         optimizer.step()
         losses.append(float(loss.item()))
+        presentations[index] += 1
+        del logits, loss
         if step % 25 == 0 or step == 1:
             metric = dict(step=step, loss=losses[-1], mean_recent_loss=sum(losses[-25:]) / len(losses[-25:]),
-                          elapsed_seconds=time.perf_counter() - started)
+                          elapsed_seconds=time.perf_counter() - started,
+                          presentations_per_page=dict(zip(config['selected_names'], presentations)))
             with history.open("a") as stream:
                 stream.write(json.dumps(metric) + "\n")
             print(json.dumps(metric), flush=True)
         if step % args.eval_every == 0 or step == args.steps:
+            from .clean_page_experiment import teacher_metrics
+            teacher = teacher_metrics(model, features, targets)
+            with (output / "teacher.jsonl").open("a") as stream:
+                stream.write(json.dumps(dict(step=step, **teacher)) + "\n")
             last = evaluate(model, features, targets, data.records, output, step)
             state = {key: value.detach().cpu() for key, value in model.state_dict().items() if not key.startswith("encoder.")}
             torch.save(dict(trainable_state=state, vocabulary_sha256=VOCABULARY_SHA256, profile=PROFILE,
                             step=step, width=args.width, layers=args.layers), output / "last.pt")
             if last["exact"] == len(data):
                 break
-    swapped = evaluate(model, features, targets, data.records, output, step, swapped=True) if len(data) > 1 else None
+    swapped = evaluate(model, features, targets, data.records, output, step, swapped=True, donors=donors) if len(data) > 1 else None
     peak_bytes = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss * (1 if sys.platform == "darwin" else 1024)
     final = dict(success=last["exact"] == len(data), steps=step, initial=initial, final=last, swapped=swapped,
                  training_seconds=time.perf_counter() - started, caching_seconds=caching_seconds,
+                 presentations_per_page=dict(zip(config['selected_names'], presentations)),
                  first_loss=losses[0], last_loss=losses[-1], peak_process_rss_bytes=peak_bytes,
                  mps_driver_allocated_bytes=torch.mps.driver_allocated_memory() if device.type == "mps" else None,
                  encoder_frozen=all(not p.requires_grad and p.grad is None for p in model.encoder.parameters()),
@@ -268,6 +313,9 @@ def main():
     run.add_argument("--device", choices=("cpu", "mps", "cuda"), default="cpu")
     run.add_argument("--resolution", type=int, default=1024)
     run.add_argument("--limit", type=int, default=1)
+    run.add_argument("--split", choices=("overfit_train", "train"), default="overfit_train")
+    run.add_argument("--indices", type=int, nargs="+", help="Zero-based indices within the training split; overrides limit")
+    run.add_argument("--max-tokens", type=int, help="Fixed decoding cap independent of target length")
     run.add_argument("--width", type=int, default=128)
     run.add_argument("--layers", type=int, default=2)
     run.add_argument("--steps", type=int, default=1500)
@@ -276,11 +324,16 @@ def main():
     run.add_argument("--seed", type=int, default=7)
     run.add_argument("--threads", type=int, default=4)
     run.add_argument("--start-from")
+    run.add_argument("--swap-within-kind", action="store_true", help="Swap only among pages of the same instrument")
     args = parser.parse_args()
     if args.command == "export":
         manifest = export_pilot(args.output)
         print(json.dumps(dict(examples=len(manifest["records"]), lengths=[r["target_length"] for r in manifest["records"]])))
     else:
+        if args.indices and (min(args.indices) < 0 or len(set(args.indices)) != len(args.indices)):
+            parser.error("indices must be distinct and nonnegative")
+        if args.max_tokens is not None and args.max_tokens < 2:
+            parser.error("max-tokens must be at least two")
         if min(args.steps, args.eval_every, args.limit, args.threads, args.layers) < 1 or args.width % 4 or args.width < 4:
             parser.error("positive run limits and a decoder width divisible by four are required")
         if args.resolution < 16 or args.resolution % 16:

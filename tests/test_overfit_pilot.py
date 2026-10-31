@@ -7,12 +7,22 @@ import xml.etree.ElementTree as ET
 import torch
 from transformers import ViTConfig, ViTModel
 
-from experiments.full_page_omr.overfit_pilot import CachedGreedy, greedy, make_model
+from experiments.full_page_omr.overfit_pilot import CachedGreedy, greedy, make_model, swap_indices
 from experiments.full_page_omr.pilot_data import PilotDataset, export_pilot, pilot_scores
 from experiments.full_page_omr.score_codec import W2I, decode, encode
 
 
 class OverfitPilotTests(unittest.TestCase):
+    def test_within_instrument_swap_changes_each_image_without_changing_kind(self):
+        records = [dict(kind=k) for k in ('horn', 'piano', 'drums') * 2]
+        donors = swap_indices(records, within_kind=True)
+        self.assertEqual(sorted(donors), list(range(6)))
+        for i, donor in enumerate(donors):
+            self.assertNotEqual(i, donor)
+            self.assertEqual(records[i]['kind'], records[donor]['kind'])
+        with self.assertRaisesRegex(ValueError, 'at least two'):
+            swap_indices(records[:3], within_kind=True)
+
     @classmethod
     def setUpClass(cls):
         cls.temporary = tempfile.TemporaryDirectory()

@@ -68,7 +68,7 @@ def pilot_scores():
         yield name, xml(root)
 
 
-def export_pilot(output):
+def export_pilot(output, *, scores=None, render_options=None):
     import verovio
     from cairosvg import svg2png
     from .font_resources import outline_text
@@ -77,7 +77,7 @@ def export_pilot(output):
     output.mkdir(parents=True, exist_ok=False)
     text_font = Path(find_spec("matplotlib").origin).parent / "mpl-data/fonts/ttf/DejaVuSerif.ttf"
     records = []
-    for name, source in pilot_scores():
+    for name, source in (pilot_scores() if scores is None else scores):
         encoded = encode_with_metadata(source)
         if inspect_score(source) != inspect_score(decode(encoded.tokens)):
             raise ValueError(f"semantic round trip failed: {name}")
@@ -86,9 +86,11 @@ def export_pilot(output):
         (folder / "source.musicxml").write_text(source, encoding="utf-8")
         (folder / "target.json").write_text(json.dumps(asdict(encoded), ensure_ascii=False, indent=2))
         toolkit = verovio.toolkit()
-        toolkit.setOptions({"inputFrom": "musicxml", "breaks": "encoded" if "<print" in source else "auto",
+        toolkit.setOptions(render_options or {"inputFrom": "musicxml", "breaks": "encoded" if "<print" in source else "auto",
                             "pageWidth": 2100, "pageHeight": 2970, "scale": 40,
                             "header": "none", "footer": "none"})
+        if render_options:
+            toolkit.resetXmlIdSeed(0)
         if not toolkit.loadData(source) or toolkit.getPageCount() != 1:
             raise ValueError(f"pilot requires a complete single-page composition: {name}")
         svg = toolkit.renderToSVG(1).replace('overflow="inherit"', 'overflow="visible"')
@@ -113,6 +115,8 @@ def export_pilot(output):
     manifest = dict(schema_version=1, purpose="in-sample pipeline diagnostic; no generalization claim",
                     profile=PROFILE, vocabulary_sha256=VOCABULARY_SHA256, renderer=toolkit.getVersion(),
                     source_hashes=source_hashes, records=records)
+    if render_options:
+        manifest.update(render_options=render_options, renderer_xml_id_seed=0)
     (output / "manifest.json").write_text(json.dumps(manifest, indent=2))
     (output / "vocabulary.json").write_text(json.dumps(VOCABULARY, ensure_ascii=False, indent=2))
     return manifest
@@ -121,19 +125,24 @@ def export_pilot(output):
 class PilotDataset(torch.utils.data.Dataset):
     """Batch-size-one adapter with explicit, correctly shifted token labels."""
 
-    def __init__(self, directory, resolution=1024, limit=None):
+    def __init__(self, directory, resolution=1024, limit=None, *, split="overfit_train"):
         self.directory = Path(directory)
         manifest = json.loads((self.directory / "manifest.json").read_text())
         if manifest["profile"] != PROFILE or manifest["vocabulary_sha256"] != VOCABULARY_SHA256:
             raise ValueError("dataset codec/vocabulary mismatch")
-        self.records = manifest["records"][:limit]
+        if split != "overfit_train":
+            from .clean_page_data import SPLITS, check_disjoint
+            if split not in SPLITS or manifest.get("recipe") != "clean-page-v1":
+                raise ValueError("unsupported dataset split/recipe")
+            check_disjoint(manifest["records"])
+        self.records = [r for r in manifest["records"] if r["split"] == split][:limit]
         if not self.records or len({r["composition_id"] for r in self.records}) != len(self.records):
             raise ValueError("empty or duplicate pilot compositions")
         self.resolution = resolution
         self.samples = []
         for record in self.records:
-            if record["page"] != 1 or record["total_pages"] != 1 or record["split"] != "overfit_train":
-                raise ValueError("pilot only supports complete single-page training scores")
+            if record["page"] != 1 or record["total_pages"] != 1:
+                raise ValueError("adapter only supports complete single-page scores")
             for key in ("image", "source", "target"):
                 if sha256(self.directory / record[key]) != record[key + "_sha256"]:
                     raise ValueError(f"dataset {key} hash mismatch")

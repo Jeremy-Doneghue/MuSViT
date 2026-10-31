@@ -350,10 +350,12 @@ class SMTOutput(CausalLMOutputWithCrossAttentions):
 class SMTFoundationModelForCausalLM(PreTrainedModel):
     config_class = SMTFoundationConfig
 
-    def __init__(self, config:SMTFoundationConfig):
+    def __init__(self, config:SMTFoundationConfig, encoder=None):
         super().__init__(config)
         
-        if config.foundation_architecture == "ViTMAEBase":
+        if encoder is not None:
+            self.encoder = encoder
+        elif config.foundation_architecture == "ViTMAEBase":
             self.encoder = IMPL_DICT[config.foundation_architecture][0].from_pretrained(config.foundation_weights, mask_ratio=0.0)
         else:
             self.encoder = IMPL_DICT[config.foundation_architecture][0].from_pretrained(config.foundation_weights)
@@ -363,7 +365,8 @@ class SMTFoundationModelForCausalLM(PreTrainedModel):
         self.decoder = Decoder(d_model=config.d_model, dim_ff=config.dim_ff, n_layers=config.num_dec_layers,
                                maxlen=config.maxlen, out_categories=config.out_categories, attention_window=config.maxlen + 1)
 
-        adaptor_in = IMPL_DICT[config.foundation_architecture][1]
+        adaptor_in = (encoder.config.hidden_size if encoder is not None
+                      else IMPL_DICT[config.foundation_architecture][1])
         #self.weight_sum = nn.Parameter(torch.zeros(25, 1, 1, 1), requires_grad=True)
         self.adaptor = nn.Conv1d(in_channels=adaptor_in, out_channels=config.d_model, kernel_size=1, stride=1)
         #self.adaptor = nn.Sequential([

@@ -29,15 +29,16 @@
 
 This working repository is based on the official code for **MuSViT: A Foundation Vision Model for Sheet Music Representation**, presented at ECCV 2026, and focuses on synthetic data and OMR. The inherited difficulty-estimation and embedding-analysis experiments have been removed; staff-level OMR and symbol detection remain available as related baselines.
 
-This is a **monorepo** collecting the experiments around MuSViT. Every experiment lives under [`experiments/`](experiments/) and is launched from the repository root through a single cross-platform CLI: **`musvit`**.
+This is a **monorepo** collecting the experiments around MuSViT. Every experiment lives under [`experiments/`](experiments). Staff OMR and detection use the **`musvit`** CLI; current full-page diagnostics use Python module entrypoints.
 
 For ongoing synthetic full-page/multi-page OMR work, start with the
 [project diary](PROJECT_DIARY.md): current state, proposed next steps, and dated
-session handoffs. The [synthetic parts guide](experiments/full_page_omr/SYNTHETIC_PARTS.md)
+session handoffs. The [full-page directory guide](experiments/full_page_omr/README.md)
+maps the current experiment modules. The [synthetic parts guide](experiments/full_page_omr/docs/SYNTHETIC_PARTS.md)
 documents the generator and dataset conventions.
 
 This project includes:
-- A central CLI (`musvit`) to discover and run all experiments from the repository root.
+- A central CLI (`musvit`) for staff-level OMR and symbol detection.
 - A full-page Optical Music Recognition (OMR) fine-tuning pipeline.
 - A staff-level OMR fine-tuning pipeline (linear probing or LoRA).
 - An object-detection fine-tuning pipeline (Faster R-CNN with a MuSViT backbone).
@@ -49,13 +50,13 @@ This project includes:
 
 | Folder | Description |
 | --- | --- |
-| [`musvit/`](musvit/) | Central launcher (`musvit` CLI): discovers and runs the experiments. |
-| [`experiments/full_page_omr/`](experiments/full_page_omr/) | Fine-tune MuSViT for full-page Optical Music Recognition (OMR). |
-| [`experiments/staff_level_omr/`](experiments/staff_level_omr/) | Fine-tune MuSViT for staff-level OMR (BiLSTM/CTC head; linear probing or LoRA). |
-| [`experiments/object_detection/`](experiments/object_detection/) | Fine-tune MuSViT + Faster R-CNN for object detection (COCO-format data). |
-| [`experiments/scan_degradation/`](experiments/scan_degradation/) | Explore reproducible photocopy effects for training-image augmentation. |
-| [`apps/bar_review/`](apps/bar_review/) | Review and transcribe scanned passages locally. |
-| [`data/`](data/) | Shared local PDF/MusicXML reference parts. |
+| [`musvit/`](musvit) | Central launcher (`musvit` CLI): discovers and runs the experiments. |
+| [`experiments/full_page_omr/`](experiments/full_page_omr) | Fine-tune MuSViT for full-page Optical Music Recognition (OMR). |
+| [`experiments/staff_level_omr/`](experiments/staff_level_omr) | Fine-tune MuSViT for staff-level OMR (BiLSTM/CTC head; linear probing or LoRA). |
+| [`experiments/object_detection/`](experiments/object_detection) | Fine-tune MuSViT + Faster R-CNN for object detection (COCO-format data). |
+| [`experiments/scan_degradation/`](experiments/scan_degradation) | Explore reproducible photocopy effects for training-image augmentation. |
+| [`apps/bar_review/`](apps/bar_review) | Review and transcribe scanned passages locally. |
+| [`data/`](data) | Shared local PDF/MusicXML reference parts. |
 
 Generated artifacts live under the producing experiment's `outputs/` directory
 and are ignored by Git. Synthetic parts and font sheets are under
@@ -83,7 +84,7 @@ This also installs the `musvit` console command into the project environment.
 
 Rendering and PDF import additionally rely on **system libraries** that `uv` does not manage:
 
-- **ImageMagick** — used by `wand` in the full-page-OMR synthetic data generator (`brew install imagemagick`, or `apt install libmagickwand-dev`).
+- **Cairo** — used by CairoSVG for synthetic score rasterization (`brew install cairo`, or `apt install libcairo2`).
 - **poppler** — used by PDF import in Bar Review and by the scan-degradation experiment (`brew install poppler`, or `apt install poppler-utils`).
 
 <a name=environment-variables></a>
@@ -106,7 +107,7 @@ Experiments authenticate against [Weights & Biases](https://wandb.ai) and the [H
 <a name=running-experiments></a>
 ## 🚀 Running Experiments
 
-All experiments are launched from the repository root with `musvit`. List what is available:
+Run commands from the repository root. List the experiments available through `musvit`:
 
 ```bash
 uv run musvit list
@@ -115,49 +116,25 @@ uv run musvit list
 Each subcommand maps its options directly onto the experiment's Python entrypoint, and `--help` is generated automatically:
 
 ```bash
-uv run musvit full-page-omr --help
 uv run musvit staff-level-omr --help
 uv run musvit object-detection --help
 ```
 
-### Full-page OMR (fine-tuning)
+### Full-page OMR experiments
+
+The current score-codec experiments have dedicated module entrypoints:
 
 ```bash
-uv run musvit full-page-omr \
-  --config_path experiments/full_page_omr/config/Polish_Scores/finetuning.json \
-  --experiment_name my_experiment \
-  --finetuning CL
+uv run python -m experiments.full_page_omr.training.short_staff_experiment --help
+uv run python -m experiments.full_page_omr.training.clean_page_experiment --help
+uv run python -m experiments.full_page_omr.generation.generate_parts --help
 ```
 
-Checkpoints and W&B logs are written inside `experiments/full_page_omr/` (`weights/`, `wandb_logs/`).
-
-The experiment automatically selects CUDA, Apple Silicon MPS, or CPU. CUDA
-defaults to mixed precision; MPS and CPU default to full precision. On macOS,
-data loading defaults to zero worker processes to avoid duplicating the in-memory
-datasets and synthetic generator. Override these settings with `--accelerator`,
-`--precision`, and `--num_workers`. For example, add `--accelerator mps
---num_workers 0` on a Mac. Full-page training memory depends strongly on the
-transcription length; benchmark representative pages before a long run.
-
-To preview synthetic training pairs without training a model:
-
-```bash
-uv run python -m experiments.full_page_omr.generate_examples \
-  --count 4 --max-systems 4 --seed 20261028
-```
-
-This downloads GrandStaff if it is not already cached, then uses the training
-renderer and augmentation pipeline. Outputs are saved to
-`experiments/full_page_omr/outputs/training_examples/`: a `preview.jpg` contact
-sheet, rendered and augmented images, exact `bekern` target tokens, decoded
-targets, reconstructed `.krn` files, and a manifest recording seeds and image
-sizes. Source excerpt counts cycle from 1 to `--max-systems`; Verovio determines
-the visible number of systems. Use `--output-dir` to choose another folder
-(relative paths are resolved from your current directory), or `--resolution`
-to change the default 1024px training input size. The command requires the same
-native rendering dependencies as full-page training. On Homebrew macOS, if
-those libraries are not found, prefix the command with
-`MAGICK_HOME="$(brew --prefix imagemagick)" DYLD_FALLBACK_LIBRARY_PATH="$(brew --prefix)/lib"`.
+See the [directory guide](experiments/full_page_omr/README.md) for dataset exports,
+training commands and results. The original bekern/Lightning pipeline and its
+`musvit full-page-omr` command have been removed. Refer to the
+[original MuSViT repository](https://github.com/OMR-PRAIG-UA-ES/MuSViT)
+for that implementation. Existing local experiment artifacts remain in place.
 
 ### Local transcription editor
 

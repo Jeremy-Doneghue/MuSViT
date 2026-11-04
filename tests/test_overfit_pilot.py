@@ -7,9 +7,9 @@ import xml.etree.ElementTree as ET
 import torch
 from transformers import ViTConfig, ViTModel
 
-from experiments.full_page_omr.overfit_pilot import CachedGreedy, greedy, make_model, swap_indices
-from experiments.full_page_omr.pilot_data import PilotDataset, export_pilot, pilot_scores
-from experiments.full_page_omr.score_codec import W2I, decode, encode
+from experiments.full_page_omr.training.overfit_pilot import CachedGreedy, greedy, make_model, swap_indices
+from experiments.full_page_omr.datasets.pilot_data import PilotDataset, export_pilot, pilot_scores
+from experiments.full_page_omr.representation.score_codec import W2I, decode, encode
 
 
 class OverfitPilotTests(unittest.TestCase):

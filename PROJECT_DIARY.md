@@ -54,26 +54,35 @@ Require readable notation and arbitrary text instructions attached to their
 passages. Verified standardization is acceptable; otherwise preserve source
 noteheads/positions/text. The audit's named-mapping loss is not itself a blocker.
 
+Directory organization (2026-11-04): see the
+[full-page workspace guide](experiments/full_page_omr/README.md) for module ownership
+and reproduction commands. Current code lives in generation/, representation/,
+datasets/, training/ and diagnostics/; reports live in docs/. User subsequently
+requested deleting the legacy bekern/Lightning pipeline: its sources, resources,
+CLI launcher and source-dependent audit tool are removed. Consult the original
+MuSViT repository for that implementation. Existing outputs and weights remain.
+
 Important files:
 
-- [Target notation coverage requirements](experiments/full_page_omr/TARGET_COVERAGE.md)
-- [Target-format analysis and recommendation](experiments/full_page_omr/TARGET_FORMAT_ANALYSIS.md)
-- [Implemented score codec and fixture guide](experiments/full_page_omr/SCORE_CODEC.md)
-- [Executed overfit pilot and reproduction](experiments/full_page_omr/OVERFIT_PILOT.md)
-- [Clean held-out baseline, executed failure and next diagnostic](experiments/full_page_omr/CLEAN_BASELINE.md)
-- [Dense horn overfit and image-conditioning results](experiments/full_page_omr/DENSE_OVERFIT.md)
-- [Longer 36-page development baseline](experiments/full_page_omr/LONG_BASELINE.md)
-- [Controlled note edits and combination probes](experiments/full_page_omr/CONTROLLED_EDITS.md)
-- [Synthetic parts guide](experiments/full_page_omr/SYNTHETIC_PARTS.md)
-- [Scenario sampler](experiments/full_page_omr/scenarios.py)
-- [Generation and conversion](experiments/full_page_omr/generate_parts.py)
-- [MusicXML serialization](experiments/full_page_omr/musicxml_score.py)
-- [Font coverage guide](experiments/full_page_omr/FONT_COVERAGE.md)
+- [Target notation coverage requirements](experiments/full_page_omr/docs/TARGET_COVERAGE.md)
+- [Target-format analysis and recommendation](experiments/full_page_omr/docs/TARGET_FORMAT_ANALYSIS.md)
+- [Implemented score codec and fixture guide](experiments/full_page_omr/docs/SCORE_CODEC.md)
+- [Executed overfit pilot and reproduction](experiments/full_page_omr/docs/OVERFIT_PILOT.md)
+- [Clean held-out baseline, executed failure and next diagnostic](experiments/full_page_omr/docs/CLEAN_BASELINE.md)
+- [Dense horn overfit and image-conditioning results](experiments/full_page_omr/docs/DENSE_OVERFIT.md)
+- [Longer 36-page development baseline](experiments/full_page_omr/docs/LONG_BASELINE.md)
+- [Controlled note edits and combination probes](experiments/full_page_omr/docs/CONTROLLED_EDITS.md)
+- [Short-staff transfer experiment setup](experiments/full_page_omr/docs/SHORT_STAFF.md)
+- [Synthetic parts guide](experiments/full_page_omr/docs/SYNTHETIC_PARTS.md)
+- [Scenario sampler](experiments/full_page_omr/generation/scenarios.py)
+- [Generation and conversion](experiments/full_page_omr/generation/generate_parts.py)
+- [MusicXML serialization](experiments/full_page_omr/generation/musicxml_score.py)
+- [Font coverage guide](experiments/full_page_omr/docs/FONT_COVERAGE.md)
 - [Scan degradation guide](experiments/scan_degradation/README.md)
 - [Scan degradation notebook](experiments/scan_degradation/scan_degradation.ipynb)
 - [Bar Review guide](apps/bar_review/README.md)
-- [Current datasets and token parsing](experiments/full_page_omr/data.py)
-- [Training entrypoint](experiments/full_page_omr/finetune.py)
+- [Current dataset adapter](experiments/full_page_omr/datasets/clean_page_data.py)
+- [Current training loop](experiments/full_page_omr/training/clean_page_experiment.py)
 - [Encoder/decoder model](experiments/full_page_omr/smt_foundation/modeling_smt.py)
 
 Local artifacts observed on 2026-10-31 (paths updated after relocation;
@@ -156,12 +165,12 @@ image without checking readability and computation.
 The tiny overfit diagnostic was reproduced on the user's 64 GB Mac Studio M4 Max
 on 2026-10-31: 1/1 at 200 updates (5.99 seconds), then 8/8 at 1000 updates
 (71.42 seconds); image conditioning and pixel-identical re-engraving passed.
-See the [Mac Studio setup and results](experiments/full_page_omr/OVERFIT_PILOT.md#mac-studio-rerun--2026-10-31)
+See the [Mac Studio setup and results](experiments/full_page_omr/docs/OVERFIT_PILOT.md#mac-studio-rerun--2026-10-31)
 for the uv environment and project-local native rendering dependencies, installed
 without admin access. These timings are training/evaluation loops, not total
 process times or controlled cross-host speed comparisons.
 
-The user-approved [first clean held-out baseline](experiments/full_page_omr/CLEAN_BASELINE.md)
+The user-approved [first clean held-out baseline](experiments/full_page_omr/docs/CLEAN_BASELINE.md)
 has now executed: 36 train/six validation/six test compositions, four systems per
 page, 8–16 bars. The bounded 1200-update run selected update 800 by validation
 loss, but all three sampled training pages, six validation pages and six test
@@ -170,7 +179,7 @@ dense-page baseline, not a demonstrated generalization gap. A six-training-page
 same-instrument image-swap diagnostic barely changed teacher-forced loss,
 suggesting weak image conditioning in this run.
 
-The follow-up [dense diagnostic](experiments/full_page_omr/DENSE_OVERFIT.md)
+The follow-up [dense diagnostic](experiments/full_page_omr/docs/DENSE_OVERFIT.md)
 passed: one 3516-token horn page at 1000 updates, then two dense horn pages at
 500 additional updates; both swapped outputs followed donor images exactly.
 All final scores stopped correctly and re-engraved pixel-for-pixel. The original
@@ -187,7 +196,7 @@ presentations/page): 6/6 exact/valid/EOS, donor-following swaps and identical
 re-engraving. Thus the horn warm-start was unnecessary for this seed and subset;
 this is still memorization, not a controlled explanation of the 36-page failure.
 
-The [longer 36-page development run](experiments/full_page_omr/LONG_BASELINE.md)
+The [longer 36-page development run](experiments/full_page_omr/docs/LONG_BASELINE.md)
 completed 14400 updates (400 presentations/page). Final checkpoint: sampled
 training pages 3/3 exact/valid, validation 0/6 valid; all reached EOS. Selected
 update-4800 checkpoint: training sample 0/3 valid, validation 0/6 valid. Final
@@ -198,7 +207,7 @@ with gold prefixes; image swaps barely affect validation CE.
 The controlled one-note pair also passed (2/2 exact, swaps and re-engraving at
 500 updates), showing that frozen features preserve that small pitch distinction.
 Two untrained edits failed transfer: the model reproduced memorized scores.
-See [controlled edits](experiments/full_page_omr/CONTROLLED_EDITS.md).
+See [controlled edits](experiments/full_page_omr/docs/CONTROLLED_EDITS.md).
 
 The four-edit composition diagnostic completed: 5/5 trained controls and swaps
 passed; 5/7 untrained combinations were exact. The two failures each missed one
@@ -206,22 +215,48 @@ pitch edit; all outputs were valid and stopped correctly. This shows limited
 composition of learned visual distinctions within a memorized page, not reading
 of unseen compositions.
 
-Work stopped at the user's explicit request after this run, due to credits and
-availability. All experiment processes completed; no further runs are queued.
-Do not start further experiments until the user returns and reauthorizes them.
-Proposed next action then: review the controlled-edit results and increase clean
-training-composition diversity with fixed validation before changing architecture.
-No larger dataset or follow-up training run has been started.
+User reauthorized experiments on 2026-11-01. The 180-composition diversity
+comparison completed 14400 updates (80 presentations/page), unchanged validation
+and architecture. Both selected and final checkpoints produced 0/6 valid
+validation scores; final token error 20.827% versus 30.267% previously, selected
+31.407% versus 28.027%. Sampled training also failed (0/3 valid), so this includes
+underfitting at the fixed update budget. Test scoring remained disabled. See
+[diversity baseline](experiments/full_page_omr/docs/DIVERSITY_BASELINE.md).
+User-approved constrained decoding is implemented and evaluated on both diversity
+checkpoints. All 12 outputs completed the grammar, but 0/12 passed full semantic
+validation; selected/final validation token error worsened to 45.280%/23.368%.
+Keep it opt-in and distinguish grammar completion from transcription success.
+See [constrained decoding](experiments/full_page_omr/docs/CONSTRAINED_DECODING.md).
+Longer 180-page training completed 36000 updates/200 presentations per page in
+3450.78 training-loop seconds. Both checkpoints still yield 0/6 valid validation
+scores. Selected/final unconstrained token error 23.210%/24.397%; constrained
+22.870%/36.933%. Sampled training also fails (0/3 valid). Field/swap diagnostics
+still suggest weak image conditioning. See DIVERSITY_BASELINE.md for full results.
+User approved setup of the short-staff transfer diagnostic. Implementation and
+immutable export are ready: 96 training passages, 16 validation families with
+three variants each; 459 tokens per passage. See SHORT_STAFF.md for the bounded
+9600-update/1800-second recipe, controls and transfer gates. MPS run short_staff_mps_20261101_01 completed 9600 updates/100 presentations
+per passage in 106.456 loop seconds. Selected/final: 0/48 valid validation and
+0/3 valid sampled training, all EOS; validation token error 3.440%/3.958%.
+Selected gold-prefix step/duration accuracy 22.14%/63.02% drops to 13.80%/36.20%
+with image swaps, showing some visual use without reliable recognition. Transfer
+gate failed. Next proposed action: inspect optimization/spatial feature access
+on the short task before scaling or adapting the encoder. Nothing queued.
+User requested recording curriculum learning as a next investigation (2026-11-04):
+start with one note on a staff, then increase sequence length and musical/layout
+complexity. First proposed action is to specify a one-note pitch-recognition
+pilot with held-out examples and progression criteria. This is an exploration
+candidate alongside longer training and optimization/visual-feature diagnostics;
+no curriculum implementation or training run has been authorized by this note.
 Do not tune against the reported test outputs. The adapter still supports only
 page 1 of 1. Continuation-page
 context, cross-page references and assembly remain separate work; do not cut
-full-part tokens at page boundaries. Retain bekern as a baseline and preserve
+full-part tokens at page boundaries. Use the upstream repository for any future bekern baseline comparison; preserve
 semantic source scores rather than deriving canonical labels from rendering.
 
-Other training details for the older general entrypoint: it defaults
-to older `carlospm12/LSMT-MAE-Base-1024-16` weights, hard-codes a maximum target
-length of 7512, and validates every 3500 epochs. Select and record explicit weights,
-check target lengths, and use a useful validation interval for the small pilot.
+The older general bekern entrypoint has been removed at the user's request
+(2026-11-04). Retained training commands and defaults are documented in the
+full-page workspace guide and individual experiment reports.
 
 ## Session log
 
@@ -472,7 +507,7 @@ check target lengths, and use a useful validation interval for the small pilot.
   text-font caches. The archive README identifies historical resource paths as
   removed; no claim is made that those resources can still be loaded.
 - Generated a fresh bundled-only `outputs/font_coverage/` using
-  `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib MPLCONFIGDIR=/private/tmp/musvit-matplotlib .venv/bin/python -m experiments.full_page_omr.font_coverage --png`.
+  `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib MPLCONFIGDIR=/private/tmp/musvit-matplotlib .venv/bin/python -m experiments.full_page_omr.generation.font_coverage --png`.
   Both bundled fonts reported no detected fallback glyphs, unexplained outlines,
   missing references or text fallback characters across the 14 specimens.
 - Six focused tests passed, including actual rendering/auditing of bundled
@@ -547,7 +582,7 @@ check target lengths, and use a useful validation interval for the small pilot.
 
 - User supplied common/not-uncommon features from their big-band collection and
   confirmed availability of real evaluation scans. Recorded the complete list in
-  [target coverage requirements](experiments/full_page_omr/TARGET_COVERAGE.md),
+  [target coverage requirements](experiments/full_page_omr/docs/TARGET_COVERAGE.md),
   including metadata, free-position instructions, percussion, cue passages,
   alternate repeat layouts, unused pre-lined staves and clipped edges.
 - User policy: include readable content; no known crossed-out passages. Clipped
@@ -598,7 +633,7 @@ check target lengths, and use a useful validation interval for the small pilot.
 - User requested the analysis. Added the linked target-format report with a
   feature coverage table, candidate comparison, source references, evidence
   limits and a concrete proposed codec/fixture/overfit sequence.
-- Added `experiments/full_page_omr/audit_target_format.py`: executes unmodified
+- Added `experiments/full_page_omr/diagnostics/audit_target_format.py`: executes unmodified
   parser function bodies extracted via AST, inspects saved repository vocabularies
   and probes conversions using original synthetic micro-scores. No dataset or
   scan transcription is included. Native converters run in subprocesses; JSON
@@ -678,7 +713,7 @@ check target lengths, and use a useful validation interval for the small pilot.
 - Executed semantic and token round trips, independently expected onsets/spans/
   routes, and rendering. Final artifacts:
   `experiments/full_page_omr/outputs/codec_validation_v1_20261031_03/`, generated by
-  `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib MPLCONFIGDIR=/private/tmp/musvit-matplotlib .venv/bin/python -m experiments.full_page_omr.codec_fixtures --output experiments/full_page_omr/outputs/codec_validation_v1_20261031_03 --png`.
+  `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib MPLCONFIGDIR=/private/tmp/musvit-matplotlib .venv/bin/python -m experiments.full_page_omr.representation.codec_fixtures --output experiments/full_page_omr/outputs/codec_validation_v1_20261031_03 --png`.
   All 16 source/decoded page pairs matched pixel-for-pixel at 900 pixels wide.
   Visually inspected decoded previews across all 16 pages. Tiny fixture token
   counts: 610–1090; 24-bar regression scores: 4938–5018. These are not a page-length
@@ -899,7 +934,7 @@ check target lengths, and use a useful validation interval for the small pilot.
   valid scores/EOS at 500 additional updates, 71.32-second loop including swaps.
   Swapped outputs matched donor transcripts 2/2, original labels 0/2; checked
   saved arrays independently. Both encoders remained frozen. See
-  [DENSE_OVERFIT.md](experiments/full_page_omr/DENSE_OVERFIT.md) for full evidence,
+  [DENSE_OVERFIT.md](experiments/full_page_omr/docs/DENSE_OVERFIT.md) for full evidence,
   timings, limits, reproduction and paths (all outputs under full-page OMR).
 - Re-engraved actual final XML: one-page 1/1 and two-page 2/2 pixel-identical.
   Visually inspected the reconstructed first horn page. Full suite 67 passed,
@@ -1115,6 +1150,376 @@ check target lengths, and use a useful validation interval for the small pilot.
   expanded dataset/run was created. Exact next action, only after user returns
   and reauthorizes: review results, then plan controlled data-diversity scaling
   with fixed validation. Do not resume GPU experiments automatically.
+
+### 2026-11-01 - Reauthorize experiments and start diversity comparison
+
+- User explicitly authorized experiments to continue. Reviewed the longer baseline,
+  controlled-edit summary and existing exporter/trainer. Workspace initially clean.
+- Declared the fixed-update-budget recipe in DIVERSITY_BASELINE.md before training:
+  180 compositions versus 36, same architecture/frozen encoder/seed 7, 14400 updates
+  or 1800 training-loop seconds, validation every 200, selected and final checkpoint
+  evaluation; test scoring disabled. Exposure is 80 versus 400 presentations/page
+  if all updates complete, so this does not isolate diversity from repetition.
+- Exported new immutable `outputs/clean_pages_180_20261101_01/` under full-page OMR,
+  master seed 71, 60 examples per instrument, target lengths 2997–6632. All pages
+  have four systems. Semantic round trips and cross-split collision checks passed.
+  Independently checked 576 artifact hashes; all 48 original records match source,
+  target, raster, family and musical-fingerprint hashes. Saved expansion_audit.json.
+- Started GPU run `outputs/clean_diversity180_mps_20261101_01/` with --skip-test
+  --evaluate-last; log `/private/tmp/musvit-diversity180-training-20261101.log`.
+  No training success or final metrics claimed yet. No architecture/code change.
+- Initial attempt interrupted after last logged update 950 (checkpoint at 800)
+  following observed host memory compression and slower updates. Partial artifacts
+  preserved. This is a suspected allocator contribution, not controlled attribution.
+  Added unused MPS-cache release before encoder/teacher pages and every 25 training
+  steps; live tensors/math unchanged. Six focused regression tests passed before
+  and after. Started fresh retry `_02`, same data/seed/bounds, log
+  `/private/tmp/musvit-diversity180-training-retry-20261101.log`.
+- Exact next action: finish bounded run, independently audit saved autonomous
+  metrics, compare selected and final checkpoints with LONG_BASELINE.md, then
+  record field/image-conditioning diagnostics and limitations as appropriate.
+
+### 2026-11-01 - Complete diversity experiment and assess grammar constraints
+
+- Fresh retry `_02` completed 14400 updates, exactly 80 presentations/page,
+  training loop 1240.17 seconds, no time cap or test scoring. Frozen encoder.
+  Selected update 11200. All artifacts under full-page OMR outputs.
+- Selected: training sample 0/3 exact/valid, validation 0/6 exact/valid,
+  validation token error 31.407%. Final: training sample 0/3 exact/valid,
+  validation 0/6 exact/valid, validation token error 20.827%. All 18 reached EOS
+  without token-cap termination. Independently recomputed every saved prediction
+  metric and verified per-page exposure; saved independent_audit.json.
+- Selected/final validation gold-prefix CE 0.0779173/0.0818730; improved from
+  the 36-page run, but neither produces usable scores. Final sampled training
+  token error 17.765%, so this includes training underfitting, not merely a
+  demonstrated generalization gap. No invalid-output structural count treated
+  as zero musical error; no valid predictions available to re-engrave.
+- Executed CPU field/image-swap diagnostics for both checkpoints with hash checks.
+  Validation pitch-step accuracy 23.89%/23.48%, duration-value 61.88%/60.64%.
+  Validation swap CE change -0.000462/+0.001201; train +0.005124/+0.002749.
+  Suggests weak image conditioning on this control; not proof of independence.
+- Full regression suite: 70 ran, 69 passed/one sandbox MPS skip. Actual GPU
+  training and runtime full-prefix/cache agreement passed. Peak process RSS
+  7,513,096,192 bytes; final sampled MPS allocation 3,874,471,936 bytes, not peak.
+  Whitespace checks passed. No generated data/weights committed; no commit made.
+- User asked about gold prefixes, autonomous decoding and potential grammar
+  enforcement. Explained their distinction and proposed same-checkpoint constrained
+  decoding comparison. Actual errors include malformed nesting/placement and
+  semantic duration/voice-position inconsistencies. Grammar can improve structure
+  but cannot guarantee visual pitch/rhythm fidelity. No decoder change yet.
+- Exact next proposed action: implement codec/profile-only incremental constraints
+  and compare constrained/unconstrained decoding on the same saved checkpoint and
+  six validation pages, no retraining or test use, no gold length/content leakage.
+  Report syntactic and musical validity separately alongside token/musical errors.
+  All experiment/diagnostic processes complete; no further run queued.
+
+### 2026-11-01 - Implement incremental grammar constraints
+
+- User explicitly requested implementation. Preserved earlier diversity work.
+  Added constrained_decoding.py: profile-driven parser and opt-in cached greedy
+  token masking, required fields, child/attribute legality/order, scalar domains,
+  canonical literal/byte distinction and UTF-8/XML character checks. No training,
+  target-derived rules, repairs, forced closure or default decoder behavior change.
+- Factored REQUIRED/REPEATABLE/UNORDERED into shared codec constants, preserving
+  vocabulary and validator behavior. Full semantic checks remain unchanged;
+  measure timing, references, voice overlap and visual fidelity are not enforced
+  by this initial grammar. Completion and codec validity must remain separate.
+- Added constrained_experiment.py, checking input/checkpoint hashes and recomputing
+  saved baseline metrics. Evaluation-only on both diversity checkpoints and the
+  same six validation pages, fixed 8192 cap. No test loading/checkpoint selection.
+  Run outputs/constrained_diversity180_20261101_01/ under full-page OMR; log
+  /private/tmp/musvit-constrained-eval-20261101.log. Results pending.
+- Six new tests cover all fixtures and dense horn/piano/drum prefixes, illegal
+  nesting/order/required fields/attributes, scalar enums and Unicode, controlled
+  logit masking and unchanged legal outputs, caps and no-finite-token failure.
+  Full suite: 76 tests, 75 passed and one sandbox MPS skip. CLI help passed.
+- Exact next action: finish evaluation, independently replay/audit saved outputs,
+  document constrained/unconstrained validity and token metrics separately.
+
+### 2026-11-01 - Complete constrained decoding evaluation
+
+- Both checkpoints completed six fixed validation pages on MPS. All 12 outputs
+  reached EOS and completed the grammar; zero full-valid or exact scores. Selected
+  token error 31.407% → 45.280%; final 20.827% → 23.368%. Interventions 11/12
+  respectively. These constraints did not improve recognition in this comparison.
+- Independently replayed all 12 token streams, reconstructed and validated XML
+  profile trees/local fields, and recomputed prediction metrics. Audit saved under
+  outputs/constrained_diversity180_20261101_01/independent_audit.json. Original
+  unconstrained baseline metrics were also recomputed. Remaining failures are
+  timing/type disagreements, backup before bar start, and measure under/overfill.
+  No valid outputs to structurally score or re-engrave; no zero-error claims.
+- CONSTRAINED_DECODING.md records reproduction, limits, exact results and checks.
+  76 tests ran, 75 passed/one sandbox MPS skip. Real GPU inference, CLI/compilation
+  and whitespace checks passed. No training, test access or checkpoint selection.
+  Earlier uncommitted work preserved; generated outputs/weights remain ignored.
+- All processes complete, nothing queued. Exact next proposed action: a bounded
+  longer-training comparison on the existing 180 pages, retaining both decoding
+  modes and fixed validation. Timing constraints are a separate possible follow-up;
+  grammar completion alone does not establish visual music recognition.
+
+### 2026-11-01 - Start bounded longer training on 180 pages
+
+- User emphasized learning relationships between meter, duration and bar fill with
+  more training/data. Continued under existing experiment authorization and GPU
+  approval. Explained current 4/4-only data cannot establish meter generalization.
+- Started fresh-decoder comparison on the same immutable 180 pages, seed 7,
+  unchanged frozen encoder/lr/model/resolution/cap, validation every 200. Bound
+  36000 updates or 3600 training-loop seconds, test disabled, both selected and
+  final checkpoints evaluated. Full completion gives 200 presentations/page.
+- Run outputs/clean_diversity180_long_mps_20261101_01/ under full-page OMR;
+  training log outputs/studio_setup_20261031/diversity_long_training_20261101.log.
+  Ignored orchestrator run_diversity_long_20261101.py in that setup directory
+  launches constrained validation comparisons only after successful training,
+  then best/last CPU field and image-swap diagnostics. All outputs are new.
+- No training code/data change or new regression testing needed for this recipe;
+  previous 76-test suite remains the latest check. No final results claimed.
+- Exact next action: monitor training result.json and queued comparisons/diagnostics,
+  independently recompute predictions/exposure and record checkpoint-separated
+  results. Do not launch another run or broaden data before reviewing this one.
+
+### 2026-11-01 - Verify completed longer 180-page experiment
+
+- User requested completion status. Training and all queued evaluations/diagnostics
+  have finished. Completed 36000 updates, 200 presentations/page, 3450.78 seconds,
+  no time cap hit. Selected update 27600; encoder frozen, test scoring disabled.
+- Selected/final training sample 0/3 valid and validation 0/6 valid/exact. Validation
+  unconstrained token error 23.210%/24.397%; constrained 22.870%/36.933%, also 0/6
+  valid each. All 30 outputs reached EOS. All 12 constrained outputs grammar-complete.
+  No complete valid scores to structurally score/re-engrave. Independently recomputed
+  all 30 prediction metrics and checked exposures/run contract; saved run audit.
+- Gold-prefix validation pitch-step accuracy 27.13%/25.91%, duration-value
+  65.07%/64.54%. Validation image-swap CE change -0.003995/-0.002085. Training
+  swaps +0.003169/+0.004962. Suggests weak visual conditioning on this control;
+  not proof of complete image independence. Full evidence in DIVERSITY_BASELINE.md.
+- Longer training did not consistently improve autonomous recognition versus the
+  shorter run; sampled training remains unsuccessful. More-data potential remains
+  open, but more compute on this recipe is not yet a demonstrated solution.
+- Documentation-only completion review; no new source change/test run or training.
+  Preserve all artifacts/uncommitted work. Exact next proposed action: design a
+  bounded visual pitch/rhythm recognition diagnostic using unseen controlled
+  examples before another longer run. No further experiment queued.
+
+### 2026-11-01 - Review direction after diversity experiments
+
+- User requested interpretation and next-step advice, including whether to
+  reconsider the direction. Reviewed DIVERSITY_BASELINE.md, LONG_BASELINE.md,
+  CONTROLLED_EDITS.md and the diagnostic/model construction code. This was
+  inspection of recorded evidence, not a new independent experiment audit.
+- Recommendation (proposed, not an agreed architecture change): pause further
+  scaling of the unchanged full-page recipe and establish held-out visual
+  pitch/rhythm recognition on short, clean staff passages. Preserve the editable
+  score contract, generator, split discipline and existing artifacts.
+- Proposed diagnostic: independent composition families, balanced pitch/rhythm
+  coverage and varied positions; short autonomous outputs; matched versus
+  swapped images, training-prior baselines, full pitch and duration accuracy.
+  Report field-specific swap effects because aggregate CE dilutes musical fields.
+  Keep source-family variants in one split. Start with the existing frozen encoder;
+  only then compare bounded encoder adaptation if transfer remains poor.
+- Proposed decision: successful short-passage transfer motivates system-to-page
+  curriculum; persistent failure motivates visual-feature/training-path diagnosis.
+  A compact event target is a possible controlled follow-up, not approval to
+  replace musvit-score-v1. Retain paired staves/voices in later piano coverage.
+- External context checked: the original full-page SMT research and official
+  implementation describe system pretraining and curriculum learning:
+  https://arxiv.org/abs/2405.12105 and https://github.com/antoniorv6/SMT.
+  This supports investigating curriculum, not a claim it will solve our task.
+- Limitations: 0 valid pages is a strict whole-score outcome; current gold-prefix
+  pitch-step metrics are not full note accuracy, and weak aggregate swap effects
+  do not prove image independence or identify a faulty encoder. Existing six-page
+  validation is development evidence, not a representative real-scan benchmark.
+- No source changes, training, test-set scoring or new tests. Exact next proposed
+  action: specify/export a bounded source-disjoint short-staff recognition pilot
+  with explicit transfer criteria before launching another full-page run.
+
+### 2026-11-01 - Set up short-staff transfer experiment
+
+- User requested setup of the proposed experiment. Added short_staff_data.py,
+  short_staff_experiment.py, SHORT_STAFF.md and tests/test_short_staff.py; extended
+  the shared adapter's accepted recipe list without changing existing recipes.
+  Existing uncommitted work and exports preserved.
+- Fixed seed 113 export outputs/short_staff_20261101_01/: 96 independent training
+  passages, 16 validation families with base/pitch/rhythm variants (48 records).
+  Two bars, one staff, eight natural-pitch notes, fixed treble/C major/4/4;
+  eighth/eighth/quarter/half permutations per bar. All targets 459 tokens.
+- Source-family variants remain together. Cross-split collision guards and full
+  semantic round trips passed; all renders contain both bars on one system.
+  Independent setup audit verified 432 source/target/raster hashes. Visually
+  inspected one validation raster. Renderer emits a harmless missing-encoded-break
+  warning; system count and visible measure checks passed for every export.
+- Runner reuses the unchanged frozen-encoder trainer: seed 7, 1024 RGB,
+  width 128/two layers, lr .001, fixed cap 1536, 9600 updates or 1800 loop seconds,
+  validation every 400; test disabled; selected/final checkpoints kept separate.
+  Adds field-specific and autonomous family-disjoint swaps, valid-only full-pitch/
+  duration/event metrics, edit-family exactness and training marginal priors.
+  Invalid musical scores remain unscorable. Heuristic transfer gates recorded
+  before training. Follow-up architecture changes remain proposals.
+- Checks: 79 tests, 78 passed/one sandbox MPS skip; includes one-update CPU
+  train/evaluate integration with tiny random encoder and forced EOS, not evidence
+  of recognition. CLI help passed. Export audit saved setup_audit.json; test log
+  /private/tmp/musvit-short-staff-tests.log. No production model training executed.
+- Limitations: only 16 independent validation families; fixed eight-note structure,
+  fixed rhythm multiset and staff position. No real scans or polyphony claim.
+  Prior full-pitch accuracy 8.854%, duration 50%, with reference event slots supplied.
+- Exact next action: run the MPS command in SHORT_STAFF.md, then inspect both
+  checkpoint reports and controls before deciding on curriculum or adaptation.
+  No process queued; no generated datasets/weights added to commits.
+
+### 2026-11-01 - Launch short-staff recognition run
+
+- User explicitly requested running the prepared experiment. Sandbox MPS probe
+  returned unavailable; launched with approved GPU access outside the sandbox.
+- Run outputs/short_staff_mps_20261101_01/, unchanged exported dataset and
+  preregistered defaults (9600 updates/1800 loop seconds, seed 7, encoder frozen).
+  Log /private/tmp/musvit-short-staff-training-20261101.log. Wrapper queues both
+  checkpoint controls after training. No test scoring or additional experiments.
+- Exact next action: monitor completion, independently audit saved predictions,
+  report base/edited-family transfer, musical coverage and image conditioning,
+  and update SHORT_STAFF.md. No result claimed at launch.
+
+### 2026-11-01 - Complete and audit short-staff experiment
+
+- Bounded run and all controls completed successfully. 9600 updates, exactly
+  100 presentations/page, 106.456 training-loop seconds; selected update 3200.
+  Frozen encoder, test scoring disabled, no recipe/source changes.
+- Selected/final training samples 0/3 valid; validation 0/48 valid/exact, including
+  0/16 for each variant. Validation token error 3.440%/3.958%. All 198 matched,
+  swapped and training-sample outputs reached EOS without cap termination.
+  Invalid scores have no autonomous musical accuracy or re-engraving result.
+- Selected gold-prefix step/octave/duration accuracy 22.14/62.24/63.02%; swapped
+  13.80/44.53/36.20%. Final matched 17.97/52.86/50.26%. Separate field values,
+  not joint-note/full-pitch accuracy. Selected checkpoint shows visual sensitivity.
+- Both checkpoints' swaps reproduce the donor image's own prediction 48/48;
+  none is an exact donor reference. Recipient output changes 48/48 selected,
+  47/48 final. Image-dependent output does not establish correct recognition.
+- Recomputed 198 saved prediction metrics, checked exposure/run contract,
+  checkpoint/input hashes and family-disjoint donor mapping. Audit stored under
+  outputs/short_staff_mps_20261101_01/independent_audit.json. Gold-prefix metrics
+  are executed GPU diagnostics, not independently rerun. Full results and limits
+  in SHORT_STAFF.md; no new tests since the 79-test setup suite. GPU backward and
+  runtime cache/full-prefix agreement passed; process exited zero.
+- Transfer gate failed and sampled training also fails; no clean generalization
+  gap claim. Exact next proposed action: inspect optimization and spatial visual
+  feature access on this short task, then choose a controlled ablation. No further
+  run or encoder adaptation launched. Existing artifacts/uncommitted work preserved.
+
+### 2026-11-04 - Review delayed-generalisation hypothesis
+
+- User asked where the latest experiment ended and whether longer training could
+  reveal delayed generalisation. Reviewed SHORT_STAFF.md, saved run result and
+  training/validation logs, and shared optimizer/checkpoint code. No new training
+  or independent prediction audit performed; existing uncommitted work preserved.
+- Latest run remains 9600 updates/100 presentations per passage, selected at 3200;
+  sampled training 0/3 valid and validation 0/48 valid at both checkpoints.
+  Validation CE fluctuates after the selected checkpoint and ends at .08514
+  versus .07298 selected. These observations do not rule out later improvement,
+  but do not establish the training-mastery stage of classical grokking.
+- External primary sources reviewed: https://arxiv.org/abs/2201.02177 and
+  https://proceedings.mlr.press/v235/humayun24a.html. Delayed generalisation is
+  plausible in principle; those results do not predict it for this OMR recipe.
+- Proposed, not agreed: bounded longer short-staff control on unchanged data and
+  architecture, with intermediate autonomous training/validation and musical-field
+  measurements; separately compare lower learning rate and local visual probes.
+  Training mastery followed by delayed held-out improvement would support the
+  hypothesis. Persistent training failure motivates optimization/feature diagnosis.
+- Code inspection: constant lr .001, AdamW with weight_decay=0; saved checkpoints
+  omit optimizer/RNG state, so loading weights would not be exact continuation.
+  Exact next proposed action: specify the bounded comparison and checkpoint/metric
+  requirements before execution. No experiment launched or queued; no tests run
+  for this documentation-only review.
+
+### 2026-11-04 - Record curriculum learning as a next investigation
+
+- User requested adding the discussed curriculum-learning idea to the diary as
+  something to explore next. Recorded in the current-state section and here;
+  no experiment, dataset export or architecture change executed.
+- Proposed progression: one note on a staff with varied pitch and fixed duration;
+  then vary duration; then two to four notes, complete bars, multiple bars,
+  systems and pages; later introduce polyphony, notation features and scan effects.
+  This isolates where recognition first fails on the current eight-note task.
+- Preserve realistic staff context and note scale, valid score labels, existing
+  target format and source-family split discipline. Vary one difficulty at a time
+  initially, retain some easier examples as difficulty rises, and advance using
+  held-out musical accuracy rather than training memorization or aggregate token
+  accuracy. Exact thresholds and data recipes remain to be specified.
+- Curriculum benefits remain a hypothesis for this model. Eventually compare
+  against a mixed-complexity training baseline with comparable compute. Relevant
+  OMR precedent: https://arxiv.org/abs/2405.12105 uses curriculum learning with
+  synthetic data; this does not establish success for our recipe.
+- Exact next proposed action: design a bounded one-note pitch-recognition pilot
+  and its held-out transfer gates before implementation/execution. Longer-training,
+  learning-rate and local-feature investigations remain candidates. No run queued.
+- Validation: documentation-only edit; checked placement and whitespace. Existing
+  uncommitted work preserved; no source tests required.
+
+### 2026-11-04 - Organize full-page OMR code and reports
+
+- User requested inspecting clutter, ownership and possible dead code, and
+  organizing experiments/full_page_omr. Mapped imports, standalone entrypoints,
+  source-hash lookups and resource paths before moving files. Preserved existing
+  modified/untracked work, datasets, weights and saved runs; no training launched.
+- Grouped code into generation/, representation/, datasets/, training/ and
+  diagnostics/. Isolated the original bekern/Lightning pipeline and its bundled
+  resources/configs/vocabularies under legacy/. Shared smt_foundation/, runtime.py
+  and the root CLI entrypoint remain. Moved experiment reports into docs/.
+- Added the full-page README with directory ownership, current training dependency
+  map, commands/reports, legacy status and migration notes. Updated repository
+  callers, tests, report commands and Markdown links to the new locations.
+  Historical path references were relocated; historical results remain unchanged.
+- Updated source-provenance lookups, default generator output paths and legacy
+  resource resolution. Root CLI still uses the experiment root for weights/logs;
+  short config paths resolve into legacy/config. Made the launch import lazy so
+  inspecting config resolution does not load native rendering dependencies.
+- Dead-code finding: removed only the unreferenced data_augmentation/_globals.py
+  placeholder containing literal `_globals.py`. Actual shared settings remain in
+  legacy/_globals.py. Older overfit_pilot and pilot_data modules are still shared
+  by current experiments; legacy code and completed experiments remain retained.
+  This is not a proof that every function in retained modules has live callers.
+- Verification: with the existing native rendering activation, 79 tests ran,
+  78 passed/one sandbox MPS skip. All 17 argparse entrypoint help checks passed;
+  short/full config lookup, legacy parser/vocabulary probes and isolated MusicXML
+  conversion passed. All internal import destinations and Markdown file links
+  resolved. Verified 77 relocated non-Python resources byte-for-byte against Git.
+  Whitespace checks passed. Test log: /private/tmp/musvit-organize-tests.log.
+- Environment limitations: an initial test attempt without native rendering
+  activation failed on Cairo loading; activated suite passes. A full legacy-stack
+  import remains blocked by missing MagickWand in this environment; legacy GPU
+  training was not run. runpy help checks emitted harmless warnings from reusing
+  imported modules within a single check process.
+- Compatibility: flat module paths have changed; there are no wrapper modules.
+  Ignored historical scripts were preserved and require equivalent import updates
+  before rerun. Original recorded artifact/source hashes remain untouched; future
+  exports/runs record the reorganized code. No commit or staging performed.
+- Exact next action: use the directory guide to choose the next experiment;
+  curriculum learning from one-note examples remains proposed, not executed.
+
+### 2026-11-04 - Delete the legacy full-page pipeline
+
+- User explicitly requested deleting the legacy pipeline rather than retaining a
+  local baseline, since the original fork source remains available upstream.
+  Deleted legacy/ (bekern data/training code, renderer/augmentation, configs,
+  vocabularies and bundled textures), the full-page CLI entrypoint, and runtime.py
+  which had no remaining production callers. Removed its runtime-only test;
+  retained the shared model integration tests and all current experiments.
+- Removed the musvit full-page-omr registry entry. Current full-page experiments
+  continue through dedicated Python module commands; staff OMR and detection
+  remain available through musvit. Removed audit_target_format.py because its
+  parser/vocabulary probes depended on deleted sources. Historical target-format
+  findings remain documented, explicitly marked historical with an upstream link.
+- Dropped legacy-only dependencies names, wand and wonderwords from pyproject.toml
+  and uv.lock. An initial offline resolver attempt lacked cached Verovio metadata;
+  pruned only the three removed packages/references from the existing lock, then
+  `uv lock --check --offline` passed (203 packages), without changing other pins.
+- Updated repository/workspace guides, installation requirements, current-state
+  diary links and launcher package description. Older diary entries remain intact.
+  Upstream reference: https://github.com/OMR-PRAIG-UA-ES/MuSViT.
+- Validation: activated rendering environment; 78 tests ran, 77 passed/one sandbox
+  MPS skip. Log /private/tmp/musvit-remove-legacy-tests.log. CLI list contains only
+  staff-level-omr and object-detection. Internal import targets and Markdown file
+  links resolve; no retained code references removed modules. Whitespace checked.
+- Existing uncommitted reorganization/current experiment work, model weights,
+  saved datasets, outputs and historical run artifacts preserved. No training,
+  commit or environment sync performed. Exact next action: choose/design the
+  next current experiment; one-note curriculum remains proposed, not executed.
 
 ### Entry template
 

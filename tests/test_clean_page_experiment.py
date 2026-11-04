@@ -3,14 +3,14 @@ import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 
-from experiments.full_page_omr.clean_page_data import (
+from experiments.full_page_omr.datasets.clean_page_data import (
     CleanPageDataset, KINDS, check_disjoint, composition_seed, export_dataset,
     make_score, musical_fingerprint,
 )
-from experiments.full_page_omr.clean_page_experiment import prediction_metrics
-from experiments.full_page_omr.clean_page_diagnostics import token_roles
-from experiments.full_page_omr.score_codec import VOCABULARY, W2I, encode
-from experiments.full_page_omr.score_semantics import inspect_score
+from experiments.full_page_omr.training.clean_page_experiment import prediction_metrics
+from experiments.full_page_omr.diagnostics.clean_page_diagnostics import token_roles
+from experiments.full_page_omr.representation.score_codec import VOCABULARY, W2I, encode
+from experiments.full_page_omr.representation.score_semantics import inspect_score
 
 
 class CleanPageTests(unittest.TestCase):

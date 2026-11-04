@@ -34,11 +34,6 @@ class Experiment:
     help_rows: tuple[tuple[str, str], ...]
 
 
-def _load_full_page_omr():
-    from experiments.full_page_omr.entrypoint import run
-    return run
-
-
 def _load_staff_level_omr():
     from experiments.staff_level_omr.entrypoint import run
     return run
@@ -50,11 +45,6 @@ def _load_object_detection():
 
 
 EXPERIMENTS: tuple[Experiment, ...] = (
-    Experiment(
-        "full-page-omr", "experiments/full_page_omr", _load_full_page_omr,
-        (("full-page-omr <config_path> <experiment_name>",
-          "Fine-tune MuSViT for full-page OMR."),),
-    ),
     Experiment(
         "staff-level-omr", "experiments/staff_level_omr", _load_staff_level_omr,
         (("staff-level-omr --ds_name <name> --model_name <musvit|musvit_light>",

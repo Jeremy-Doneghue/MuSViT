@@ -7,9 +7,9 @@ import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 
-from experiments.full_page_omr.generate_parts import generate, render_musicxml, to_mei
-from experiments.full_page_omr.musicxml_score import to_musicxml
-from experiments.full_page_omr.scenarios import (
+from experiments.full_page_omr.generation.generate_parts import generate, render_musicxml, to_mei
+from experiments.full_page_omr.generation.musicxml_score import to_musicxml
+from experiments.full_page_omr.generation.scenarios import (
     FEATURES, HOLDOUTS, ScenarioSpec, expand_features, make_scenario, observe_features, plan_dataset,
 )
 

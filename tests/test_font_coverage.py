@@ -8,11 +8,11 @@ import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 
-from experiments.full_page_omr.font_coverage import coverage_cases, generate_coverage
-from experiments.full_page_omr.font_resources import (
+from experiments.full_page_omr.generation.font_coverage import coverage_cases, generate_coverage
+from experiments.full_page_omr.generation.font_resources import (
     SVG, audit_glyphs, outline_text,
 )
-from experiments.full_page_omr.scenarios import FEATURES, observe_features
+from experiments.full_page_omr.generation.scenarios import FEATURES, observe_features
 
 BASE_TEXT = Path(find_spec('matplotlib').origin).parent / 'mpl-data/fonts/ttf/DejaVuSerif.ttf'
 

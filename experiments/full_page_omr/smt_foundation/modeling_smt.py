@@ -7,7 +7,7 @@ from torch.nn.init import xavier_uniform_
 from transformers import PreTrainedModel, ViTModel
 from transformers.modeling_outputs import CausalLMOutputWithCrossAttentions
 
-from .configuration_smt import SMTFoundationConfig
+from experiments.full_page_omr.smt_foundation.configuration_smt import SMTFoundationConfig
 
 # MuSViT (LSMT-MAE) vision backbones. Each entry maps the architecture name to
 # [implementation class, encoder hidden size].

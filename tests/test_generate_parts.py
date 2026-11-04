@@ -4,9 +4,9 @@ import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 
-from experiments.full_page_omr.generate_parts import make_part, to_mei, generate, validate, NS, render_musicxml, Slur, Event, Measure
-from experiments.full_page_omr.musicxml_score import to_musicxml, check_conversion, key_alter, multirest_groups, beam_plan
-from experiments.full_page_omr.jazz_notation import simile_groups
+from experiments.full_page_omr.generation.generate_parts import make_part, to_mei, generate, validate, NS, render_musicxml, Slur, Event, Measure
+from experiments.full_page_omr.generation.musicxml_score import to_musicxml, check_conversion, key_alter, multirest_groups, beam_plan
+from experiments.full_page_omr.generation.jazz_notation import simile_groups
 
 
 class SyntheticPartTests(unittest.TestCase):

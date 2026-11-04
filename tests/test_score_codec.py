@@ -7,13 +7,13 @@ import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 
-from experiments.full_page_omr.codec_fixtures import (
+from experiments.full_page_omr.representation.codec_fixtures import (
     alternatives, cross_staff, drums, fixtures, horn, note, piano, score, validate_all, validate_fixture, xml,
 )
-from experiments.full_page_omr.score_codec import (
+from experiments.full_page_omr.representation.score_codec import (
     CodecError, PROFILE, VOCABULARY, VOCABULARY_SHA256, W2I, canonicalize, decode, encode, encode_with_metadata,
 )
-from experiments.full_page_omr.score_semantics import inspect_score
+from experiments.full_page_omr.representation.score_semantics import inspect_score
 
 
 class ScoreCodecTests(unittest.TestCase):
@@ -71,8 +71,8 @@ class ScoreCodecTests(unittest.TestCase):
         self.assertEqual(len(VOCABULARY), len(W2I))
 
     def test_renderer_retains_coda_with_canonical_attribute_tokens(self):
-        from experiments.full_page_omr.generate_parts import make_part
-        from experiments.full_page_omr.musicxml_score import to_musicxml, musicxml_to_mei, normalize_mei, check_conversion
+        from experiments.full_page_omr.generation.generate_parts import make_part
+        from experiments.full_page_omr.generation.musicxml_score import to_musicxml, musicxml_to_mei, normalize_mei, check_conversion
         source = decode(encode(to_musicxml(make_part(seed=7, scenario="ds_coda"))))
         check_conversion(source, normalize_mei(source, musicxml_to_mei(source)))
 
@@ -111,7 +111,7 @@ class ScoreCodecTests(unittest.TestCase):
         hashes = []
         for seed in ("1", "1234"):
             process = subprocess.run([sys.executable, "-c",
-                                      "from experiments.full_page_omr.score_codec import VOCABULARY_SHA256; print(VOCABULARY_SHA256)"],
+                                      "from experiments.full_page_omr.representation.score_codec import VOCABULARY_SHA256; print(VOCABULARY_SHA256)"],
                                      env={**os.environ, "PYTHONHASHSEED": seed}, capture_output=True, text=True, check=True)
             hashes.append(process.stdout.strip())
         self.assertEqual(hashes, [VOCABULARY_SHA256] * 2)

@@ -4,7 +4,6 @@ from unittest.mock import patch
 import torch
 from transformers import ViTConfig, ViTModel
 
-from experiments.full_page_omr.runtime import runtime_settings
 from experiments.full_page_omr.smt_foundation.configuration_smt import SMTFoundationConfig
 from experiments.full_page_omr.smt_foundation.modeling_smt import (
     IMPL_DICT,
@@ -66,21 +65,6 @@ class FullPageOMRTests(unittest.TestCase):
     @unittest.skipUnless(torch.backends.mps.is_available(), "MPS unavailable")
     def test_mps_training_and_prediction(self):
         self.check_training_and_prediction("mps")
-
-    def test_runtime_defaults(self):
-        with patch("torch.cuda.is_available", return_value=False), patch(
-            "torch.backends.mps.is_available", return_value=True
-        ), patch("sys.platform", "darwin"):
-            self.assertEqual(runtime_settings(configured_workers=20), ("mps", "32-true", 0))
-            self.assertEqual(runtime_settings("cpu", "32-true", 2), ("cpu", "32-true", 2))
-        with patch("torch.cuda.is_available", return_value=True), patch("sys.platform", "linux"):
-            self.assertEqual(runtime_settings(configured_workers=20), ("cuda", "16-mixed", 20))
-        with patch("torch.cuda.is_available", return_value=False), patch(
-            "torch.backends.mps.is_available", return_value=False
-        ), patch("sys.platform", "linux"):
-            self.assertEqual(runtime_settings(), ("cpu", "32-true", 0))
-        with self.assertRaises(ValueError):
-            runtime_settings(num_workers=-1)
 
 
 if __name__ == "__main__":

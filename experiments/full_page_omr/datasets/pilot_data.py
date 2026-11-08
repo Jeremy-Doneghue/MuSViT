@@ -134,11 +134,20 @@ class PilotDataset(torch.utils.data.Dataset):
             raise ValueError("dataset codec/vocabulary mismatch")
         if split != "overfit_train":
             from experiments.full_page_omr.datasets.clean_page_data import SPLITS, check_disjoint
-            if split not in SPLITS or manifest.get("recipe") not in ("clean-page-v1", "short-staff-v1"):
+            if split not in SPLITS or manifest.get("recipe") not in ("clean-page-v1", "short-staff-v1", "one-note-pitch-v1"):
                 raise ValueError("unsupported dataset split/recipe")
             check_disjoint(manifest["records"])
         self.records = [r for r in manifest["records"] if r["split"] == split][:limit]
-        if not self.records or len({r["composition_id"] for r in self.records}) != len(self.records):
+        if manifest.get('recipe') == 'one-note-pitch-v1':
+            # Intentional raster variants may reuse a source, always in one family.
+            sources = {}
+            for r in manifest['records']:
+                identity = (r['family_id'], r['source_sha256'], r['target_sha256'])
+                if sources.setdefault(r['composition_id'], identity) != identity:
+                    raise ValueError('inconsistent one-note source family')
+        elif len({r["composition_id"] for r in self.records}) != len(self.records):
+            raise ValueError("duplicate pilot compositions")
+        if not self.records:
             raise ValueError("empty or duplicate pilot compositions")
         self.resolution = resolution
         self.samples = []

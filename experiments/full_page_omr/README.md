@@ -11,8 +11,8 @@ remains available in the [original MuSViT repository](https://github.com/OMR-PRA
 | --- | --- | --- |
 | `generation/` | Synthetic parts, MusicXML/MEI conversion, jazz notation, scenario sampling, fonts | Dataset/tooling work; codec fixtures also use conversion and font helpers |
 | `representation/` | Versioned score vocabulary, codec, semantic checks, fixtures, optional grammar constraints | All current exports, training and evaluation |
-| `datasets/` | Pilot, clean-page and short-staff exports/adapters; controlled dense edits | Current training and transfer probes |
-| `training/` | Pilot and clean-page trainers; short-staff orchestration | Current experiments; shared model/greedy-decoding helpers live here too |
+| `datasets/` | Pilot, clean-page, short-staff and one-note exports/adapters; controlled dense edits | Current training and transfer probes |
+| `training/` | Pilot and clean-page trainers; short-staff and one-note orchestration | Current experiments; shared model/greedy-decoding helpers live here too |
 | `diagnostics/` | Musical-field and image-swap probes, constrained evaluation, re-engraving | Evaluation of saved runs |
 | `smt_foundation/` | Shared encoder/decoder model and configuration | Current training and diagnostics |
 | `paths.py` | Stable experiment-root location | Source provenance hashes after relocation |
@@ -22,9 +22,15 @@ remains available in the [original MuSViT repository](https://github.com/OMR-PRA
 
 ## Current experiment path
 
-The latest completed experiment is the [short-staff transfer diagnostic](docs/SHORT_STAFF.md).
-It failed transfer and sampled training validity. Curriculum learning beginning
-with one note is a proposed investigation; it has not been implemented or run.
+The latest completed experiment is the [paired score-versus-compact-pitch comparison](docs/PITCH_TARGETS.md):
+all 14 pitches taught, 56/56 training/new-placement images, identical initial
+decoder/vocabulary and shared frozen features. Selected score version: 35/56
+training and 18/56 new placements correct. Compact version: constant B5, 4/56 each;
+final compact predictions malformed. Both gates failed. This finite appearance
+diagnostic deliberately shares labels and does not claim composition-family isolation.
+A bounded direct pitch choice without sequence generation is the next proposed
+diagnostic; training-stability comparisons remain separate. Earlier one-note and
+short-staff results remain in their reports. No experiment is running or queued.
 
 ```text
 representation/codec_fixtures + datasets/clean_page_data
@@ -62,6 +68,10 @@ reports; module names now include their purpose directory.
 | Clean-page/diversity training | `experiments.full_page_omr.training.clean_page_experiment` | [Long baseline](docs/LONG_BASELINE.md), [diversity](docs/DIVERSITY_BASELINE.md) |
 | Export short passages | `experiments.full_page_omr.datasets.short_staff_data` | [Short staff](docs/SHORT_STAFF.md) |
 | Train/evaluate short passages | `experiments.full_page_omr.training.short_staff_experiment` | [Short staff](docs/SHORT_STAFF.md) |
+| Export one-note pitch pilot | `experiments.full_page_omr.datasets.one_note_data` | [One note](docs/ONE_NOTE.md) |
+| Train/evaluate one-note pitch pilot | `experiments.full_page_omr.training.one_note_experiment` | [One note](docs/ONE_NOTE.md) |
+| Export paired all-notes targets | `experiments.full_page_omr.datasets.pitch_target_data` | [Paired targets](docs/PITCH_TARGETS.md) |
+| Compare score/compact pitch targets | `experiments.full_page_omr.training.pitch_target_experiment` | [Paired targets](docs/PITCH_TARGETS.md) |
 | Controlled note edits | `experiments.full_page_omr.datasets.dense_contrast`, `experiments.full_page_omr.datasets.dense_composition` | [Controlled edits](docs/CONTROLLED_EDITS.md) |
 | Evaluate edit transfer | `experiments.full_page_omr.diagnostics.dense_contrast_eval` | [Controlled edits](docs/CONTROLLED_EDITS.md) |
 | Musical-field probes | `experiments.full_page_omr.diagnostics.clean_page_diagnostics` | [Long baseline](docs/LONG_BASELINE.md) |

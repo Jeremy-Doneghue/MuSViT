@@ -214,6 +214,10 @@ def train(args):
             if validation['cross_entropy'] < best_loss:
                 best_loss,best_step = validation['cross_entropy'],step
                 checkpoint(step,output/'best.pt')
+        # Optional fixed snapshots are measured after training, so autonomous
+        # decoding neither consumes the training budget nor changes its RNG.
+        if step in getattr(args, 'snapshot_steps', ()):
+            checkpoint(step, output / f'step_{step:08d}.pt')
         if timed_out:
             break
     training_seconds = time.perf_counter()-started

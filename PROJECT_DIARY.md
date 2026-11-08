@@ -49,6 +49,131 @@ or handwriting recognition.
 
 ## Current state
 
+**2026-11-08 whole-project Curriculum Lab:** desktop Save/Open now operate on one
+portable `.musvitlab` project, replacing the main individual-recipe save flow.
+Projects contain up to eight independent named/ordered degradation levels,
+recipes/ranges/seeds/manual values, exact current preview assets/manifests,
+curriculum/source choices and workspace/view/region/theme/panel state. Defaults
+are editable Clean/Mild/Moderate/Heavy exploratory starters. Compare shows source
+and every level side by side; Generate all levels runs the common selected source
+through each recipe on the warm worker. Stale/missing previews are indicated.
+Real-scan projects embed the selected page; no annotation DB is created/changed.
+Old v1/v2 recipe JSON can be imported into the selected level. Project updates are
+atomic with `.project-backups/`; preview ZIPs still export only the selected
+displayed preview. All 57 app tests passed, including portable restoration into an
+empty data directory, pending edits versus displayed previews, bounds, layout,
+scan restoration, hash/collision checks and level switching during rendering.
+Native Cocoa Generate-all/Compare/Save/Open round trip restored exact full state
+without re-rendering. See [desktop workflow](apps/bar_review/README.md#desktop-curriculum-lab-bui).
+Exact next action: restart desktop, edit/add levels, open Compare and Generate all
+levels, then Save project to retain the complete lab workspace.
+
+**2026-11-08 recipe update persistence:** recipe Save now atomically updates an
+existing chosen JSON instead of rejecting it, preserving prior bytes in sibling
+`.recipe-backups/`. This fixes reloading an unchanged older file after an attempted
+save. Save/Open remember the current recipe path and show it in status. Range
+checkboxes and exact bounds passed a native existing-file Save/Open round trip;
+all 11 desktop tests passed, including backup and failed-write preservation.
+Preview ZIP exports remain exclusive-create. Restart desktop, then save the ranged
+recipe to its existing filename and reopen it.
+
+**2026-11-08 editable ranged preview sliders:** ranged numeric sliders now remain
+editable within Min/Max and synchronize to the completed preview's chosen value.
+Editing sets an exact preview override for Generate while preserving the saved
+range; New sample clears overrides and resumes seeded sampling. Stale jobs do not
+overwrite newer control edits. Requests/manifests record overrides for replay;
+saved recipes retain the sampling distribution. All 49 app tests and a native
+drag/manual-value/resampling/export check passed. Restart desktop to load it.
+
+**2026-11-08 ranged recipe values:** every desktop numeric effect control now
+supports optional Range/Min/Max. Rotation starts at −3°…+3°; fixed black/white
+thresholds can use an integer interval. Each property samples uniformly from a
+stable recipe-seed/step-ID/property stream; same seed replays, New sample advances
+the seed and generates again. Exports retain bounds and actual sampled/backend
+values. Ranged recipe JSON uses version 2; fixed version 1 files remain supported.
+All 47 app tests and a native three-preview sampling/replay/export check passed.
+Restart desktop and enable Range beside the desired numeric property.
+
+**2026-11-08 file-dialog crash fixed:** Save/Open/Export now use non-blocking BUI
+browser windows on the existing event loop. Reproduced the reported SIGABRT in
+native Cocoa: closing blocking `filebrowser.ask()` returned to an invalid/
+prematurely freed autorelease pool. The replacement survived close/Cancel,
+save/reopen/export and parent-window shutdown in native macOS tests; all eight
+desktop tests passed. Correction to earlier backend notes: sandboxed probes used
+Tk because native availability was restricted there; outside the sandbox this
+same wheel reports native Cocoa support and was tested with it. Restart the
+desktop, then retry closing or cancelling Save Recipe.
+
+**2026-11-08 resizable desktop regions:** draggable borders now resize either
+sidebar and the source/augmented viewport split. Borders highlight on hover and
+show a horizontal resize cursor; dragging clamps neighboring areas to usable
+minimum widths. Double-click resets the sidebar layout or equal image widths.
+Proportions survive workspace switches within the session and scale with the
+window; hidden areas hide their dividers. Seven desktop tests and a live region
+drag/redraw/workspace check passed. Restart the desktop to use the controls.
+
+**2026-11-08 unified image viewports:** desktop source/augmented images now zoom
+and pan directly, replacing separate page/detail sections and X/Y sliders.
+Controls: Fit, 25–400%, −/+, wheel vertical pan, Shift+wheel horizontal pan,
+Ctrl+wheel zoom, drag and arrow-key pan. Link views toggles synchronized relative
+centers; resize/workspace changes redraw automatically. Only visible pixels are
+drawn from cached source pages. Six desktop tests and a live zoom/scroll/resize
+check passed; screenshots inspected. Restart the desktop to use the viewer.
+
+**2026-11-08 Add Effect menu:** desktop effect insertion now uses a single
+Blender-style Add Effect button opening categorized BUI submenus. Selecting an
+effect appends it immediately; typing searches all categories, Escape dismisses,
+and the button disables at 12 steps. Removed the separate effect dropdown.
+All six desktop tests passed with actual popup search/selection, plus manual
+headless checks of submenu insertion, dismissal, all 17 entries and stack limit.
+Restart the desktop to load this UI change.
+
+**2026-11-08 warm desktop worker:** the desktop now starts one persistent preview
+process when its window opens, preloads engraving/Augraphy dependencies once and
+submits serial jobs to that process's main thread. The existing GUI executor
+thread handles IPC; native faults remain outside the UI process. Crashes,
+connection failures and 120-second job timeouts retire the process; the next
+preview automatically starts a replacement. Closing the app stops idle/active
+workers. All 41 app tests passed, including cross-font replay in one process,
+one-shot output equivalence and lifecycle failures. Live GUI warmup/repeated
+light-copy previews/cleanup passed: 0.57s then 0.32s, same PID. Separate horn-page
+benchmark after 1.64s warmup: light-copy 0.44s new source/0.22s reused, bound-copy
+0.79s reused. These are local measurements, not a guarantee for the user's machine
+or recipe. The user's reported ~10s startup is now paid once per desktop session
+or worker restart. Web still uses fresh workers. Exact next action: restart the
+desktop, wait for "Preview worker ready", then compare consecutive previews of
+the user's slow recipe.
+
+**2026-11-08 earlier preview optimizations:** progress now shows the active
+phase/ordered effect and elapsed wall time. Clean/Pillow/OpenCV-only recipes skip
+Augraphy imports, the desktop reuses hash-verified synthetic source engravings
+within a session when inputs/code/dependency versions match, and detail panning
+uses cached pages/in-memory crops. Manifests record phase and per-effect timings.
+Matched single-run horn-page checks: clean 2.07→0.90s (0.14s reused source),
+light-copy 2.19→1.38s reused source, bound-copy 2.74→2.12s reused source; all
+image/MusicXML hashes matched. All 37 tests and a two-preview live-window
+progress/reuse check passed. Those timings used fresh crash-isolated workers;
+the current persistent desktop process supersedes that repeated-startup design.
+Web gets conditional imports/timings, but progress and source selection reuse
+are desktop-only.
+
+**2026-11-08 desktop application:** a Python/BUI desktop Curriculum Lab now
+shares the existing backend and catalogs. See
+[desktop workflow](apps/bar_review/README.md#desktop-curriculum-lab-bui).
+Blender-style top workspaces (Curriculum, Scan Recipe, Compare, Manifest),
+collapsible/reorderable effect panels, native/model image comparison, pixel detail
+inspection, recipe JSON save/load and immutable ZIP export are implemented.
+Run `apps/bar_review/launch_curriculum.command` on this Mac, or install with
+`uv sync --extra desktop` and run `.venv/bin/python apps/bar_review/desktop.py`.
+The tested BUI 0.4.1 wheel uses its Tk window host here, with BUI-rendered Blender
+components; no GPU claim or bundled/signed application. Direct RGBA image buffers
+avoid a reproduced native crash in the wheel's asynchronous macOS image wake.
+All 34 app tests passed; a live-window isolated Petaluma/rotation/DPI/bilevel
+preview, workspace switching, export and clean close passed after that workaround.
+Existing annotations/scans are read-only to this frontend; import scans through
+Bar Review and refresh the desktop collection. Next action: open the desktop
+launcher and review representative notation/scans and recipe orders for calibration.
+
 **2026-11-08 application update:** added a local Curriculum Lab to
 [Bar Review](apps/bar_review/README.md#curriculum-lab), reachable at
 `/curriculum.html`. Five proposed stages, eight synthetic example types, imported
@@ -1123,3 +1248,374 @@ full metrics and transient troubleshooting in subsystem reports rather than repe
   No existing dataset/annotation/training changed. Exact next action: restart
   Bar Review, reload the lab, and tune the added steps on representative music
   while checking that distinguishing notation remains readable.
+
+- **2026-11-08 — BUI desktop Curriculum Lab:** user requested a desktop version
+  using BUI's Python Blender components, then selected Blender-style top mode tabs.
+  Inspected the supplied upstream repository and installed/pinned optional
+  `blenderui==0.4.1`; updated `pyproject.toml`/`uv.lock` without changing the core
+  dependency versions. Added `apps/bar_review/desktop.py`, executable macOS
+  `launch_curriculum.command`, six desktop integration tests and README workflow.
+  Four shared-state workspaces expose five proposed stages/eight examples/three
+  fonts/all 17 ordered effects; collapsible panels support native grip dragging,
+  Up/Down, bypass and removal. Viewer has native/1024 comparison, click/slider/key
+  relative focus and 100/200/400% nearest-neighbor pixel detail. Added versioned
+  scan-recipe JSON save/load, displayed-preview manifest and exclusive-create ZIP
+  exports. Background worker requests snapshot controls/documents, recover errors
+  and indicate mid-render edits. Uses the existing isolated Verovio worker and
+  immutable preview backend; reads existing scan DB read-only without initializing
+  it. Original web backend, exports, annotations, models and training unchanged.
+  Executed checks: all 34 app tests passed (28 existing plus 6 desktop); actual
+  BUI input tested workspace clicks and native panel-grip recipe reordering;
+  checked layout bounds, letterbox hit testing, worker failure recovery/stale
+  request snapshots, JSON validation, read-only collection and exact ZIP hashes/
+  refusal to overwrite. Initial real passage worker and ZIP passed. An actual
+  window opened/closed, but the first live image preview crashed with SIGSEGV.
+  macOS report showed BK_image_poll → bk_ctx_dirty_rect → Python callback on
+  the Tk/Cocoa event loop. Inspection points to the released wheel's unguarded
+  async redraw callback/GIL interaction; the precise upstream defect was not
+  independently isolated. Replaced file-backed async image loading in the viewer
+  with Pillow-decoded RGBA buffers passed to BUI; reuse unchanged page buffers.
+  A repeated live-window Petaluma full horn preview with rotation -1°, 75 DPI,
+  Otsu threshold completed in 3.65 seconds through display/export/workspace
+  switching and clean event-loop shutdown. Native output was 620x867, true 1-bit.
+  Artifact: `/private/tmp/musvit-desktop-gui-fixed-20261108/curriculum/f88db588448348feab7f6f70b633e6e0/`;
+  ZIP beside its curriculum directory. Dark preview and light Compare layout
+  screenshots were visually inspected. Launcher headless screenshot, Python
+  compilation, shell syntax, offline lock consistency and diff whitespace passed.
+  Limits: this Mac's wheel reports no native C window host and uses BUI's Tk host;
+  GPU acceleration and a packaged/signed `.app` are not delivered. File-dialog
+  interaction and extended manual usability review remain unexecuted. Detail
+  viewports are relative and need refreshing after width changes; no spatial
+  registration, legibility approval or scanner calibration added. Exact next
+  action: open the desktop launcher and exercise recipes/export dialogs against
+  representative notation and imported development scans before approving data.
+
+- **2026-11-08 — Preview progress and measured startup reductions:** user reported
+  slow desktop previews and requested progress plus straightforward optimization.
+  Profiled original clean/light-copy/bound-copy horn-page workers (music seed 7,
+  Leipzig, recipe seed 42): clean still loaded Augraphy's complete stack;
+  profiled import cost was roughly 1.5–2s, with source generation/rendering around
+  1s. These profiles include profiler overhead, not direct speed-comparison data.
+  Added atomic worker progress sidecars read by a short-lived monitor thread,
+  queue-based desktop updates on the UI thread, a BUI progress bar with named
+  phases/effects and elapsed clock, completion duration and source-reuse status.
+  Bar fractions are pipeline milestones, not wall-time predictions. Manifests now
+  store source/augmentation/save/worker timings and separate per-effect durations
+  without making deterministic effect records depend on runtime measurements.
+  Deferred Augraphy imports for clean/disabled-only and rotation/DPI/threshold
+  recipes. Added desktop session source reuse (up to 64 source selections):
+  match request fields, relevant generator/renderer/codec code and dependency
+  versions, verify PNG/MusicXML hashes from an immutable previous preview, and
+  fall back to rendering if absent/corrupt. Source reuse creates a distinct new
+  preview, never overwrites the earlier one, and does not reuse real-scan files.
+  Removed detail PNG write/reopen cycles and repeated full-page decode while
+  panning; BUI receives in-memory RGBA crops and still avoids its unsafe async
+  file-image callback. Documented operation, limits and measured timings.
+  Checks: all 37 app tests passed, including three new checks for avoided imports,
+  source/input/code/hash invalidation with identical source pixels, actual isolated
+  worker progress/timing delivery; extended desktop test checks progress and
+  completion. Existing worker timeout/failure, RNG/replay, geometry, immutability,
+  browser/server and desktop behavior checks still pass. A live two-preview
+  desktop check completed in 2.40s then 2.09s with source reuse; active/completed
+  progress screenshots generated, active screenshot visually inspected, event
+  loop closed cleanly. Python compilation and diff whitespace checks passed.
+  For unprofiled comparisons, copied the original backend from Git into temporary
+  scratch, adjusting only its repository-root lookup. One new-worker run per case
+  before/after: clean 2.070→0.895s; repeated clean with source reuse 0.140s;
+  light-copy 2.192→1.377s reused; bound-copy 2.744→2.115s reused. Every PNG and
+  MusicXML hash matched the baseline. Light-copy effect execution was 0.0381s;
+  remaining augmentation time (~1.03s) was predominantly dependency setup.
+  Bound-copy rotation was 0.5003s. Benchmark artifacts/configs/results:
+  `/private/tmp/musvit-preview-profile-20261108/`,
+  `/private/tmp/musvit-preview-baseline-20261108/`,
+  `/private/tmp/musvit-preview-final-20261108/comparison.json`;
+  live check: `/private/tmp/musvit-desktop-progress-live-20261108/`.
+  Limits: single-run timings on this Mac, not broad effect/resolution calibration;
+  fresh isolated workers still pay imports for actual Augraphy recipes. No
+  persistent renderer/native state sharing, recipe reordering, quality reduction,
+  training, source-scan edits or existing export changes. Browser progress/source
+  reuse was not added. Exact next action: restart the desktop and inspect the
+  active effect plus exported timing manifest for the user's slow recipe before
+  choosing further effect-specific optimization.
+
+- **2026-11-08 — Persistent desktop preview worker:** user reported ~10 seconds
+  in "Starting preview worker" and requested an always-running worker receiving
+  jobs. Added `preview_worker.py`: one long-lived subprocess with serial stdin
+  job submission and atomic result/progress files, no stdout protocol dependence.
+  The process preloads Verovio/Cairo, generator dependencies and Augraphy on its
+  main thread, then blocks waiting for jobs. Each render/toolkit is also created
+  on that same thread; the previous per-request HTTP-thread renderer problem is
+  not reintroduced. Desktop starts warmup through its existing executor when the
+  window opens, reports loading phases/readiness, queues Generate behind warmup,
+  keeps the process idle between requests and retains source-reuse/progress.
+  Native exits/broken connections/job deadlines retire the process and restart
+  on the next request; validation errors preserve it. Startup has its own
+  120-second deadline, preview execution has 120 seconds, and close terminates
+  even an active worker without waiting for its serial job lock. Failed jobs
+  are not automatically replayed. Web one-shot worker behavior is unchanged.
+  Updated README to distinguish warm desktop behavior from earlier fresh-worker
+  timing measurements; existing data, recipes and immutable exports preserved.
+  Checks: all 41 app tests passed (four new persistent-process tests), including
+  six cross-font passage renders in one PID with exact replay, equivalent image/
+  MusicXML hashes versus a one-shot worker, invalid request recovery in the same
+  PID, simulated fatal exit and timeout followed by successful real replacement,
+  startup timeout and active-job close/cleanup. First manual warm-worker check:
+  warmup 2.389s, four same-PID cross-font light-copy jobs 0.392/0.265/0.269/0.267s.
+  Separate horn-page benchmark: warmup 1.636s; light-copy new source 0.437s,
+  reused source 0.222s; bound-copy reused source 0.787s, all one PID. Config:
+  stage 2 horn_page, Leipzig, music seed 7, recipe seed 42. Results/artifacts:
+  `/private/tmp/musvit-warm-worker-benchmark-20261108/benchmark.json`.
+  Actual desktop `run()` warmup/readiness and two jobs passed at 0.57s/0.32s,
+  same PID; second reused its source. Window shutdown terminated the process
+  and removed its IPC directory. Live artifacts:
+  `/private/tmp/musvit-warm-desktop-live-20261108/`. Python compilation and diff
+  whitespace passed. Limits: local warmup measurements do not reproduce or
+  dismiss the user's reported ~10s startup; that cost remains once per session/
+  restart. Larger pages/heavy effects still take computation time, and long
+  soak/memory-growth testing remains unexecuted. Exact next action: restart the
+  desktop and compare consecutive previews after "Preview worker ready" on
+  the user's slow recipe; inspect per-effect timings if computation remains slow.
+
+- **2026-11-08 — Blender-style Add Effect popup:** user supplied a Blender Add
+  Modifier screenshot and requested direct effect insertion from a button/menu.
+  Replaced the desktop effect dropdown/button sequence with Add Effect opening
+  BUI's own popup menu: Paper & framing, Ink & printing, Dirt & interference and
+  Scan & geometry. Native type-to-search finds leaves across all categories;
+  selecting a leaf appends a default-parameter step with a fresh stable ID.
+  Escape cancels, existing order is retained, and the 12-step guard remains.
+  README updated. All six desktop tests passed; the recipe integration test now
+  opens the popup, types a search and clicks its result before verifying reorder/
+  save/load. Additional headless interaction checks confirmed all 17 catalog
+  effects appear exactly once, hovering a category opens its submenu, selecting
+  DPI adds it and closes popups, Escape adds nothing, and insertion stops at 12.
+  Popup/submenu screenshots generated and submenu layout visually inspected.
+  No renderer, recipes, worker lifecycle, datasets or exports changed; full
+  backend suite was not repeated for this UI-only edit. Exact next action:
+  restart the desktop and use Add Effect, then choose a category/item or type
+  to search. Live mouse/keyboard usability review remains available to the user.
+
+- **2026-11-08 — Unified zoomable main image viewports:** user requested replacing
+  the separate full-page and zoomed sections with main-image zoom and scrolling.
+  Replaced both page/detail pairs with clipped BUI image viewports, a Fit/25–400%
+  selector, −/+ and Fit buttons. Wheel pans vertically, Shift+wheel horizontally,
+  Ctrl+wheel changes zoom, dragging pans, and existing arrow shortcuts pan.
+  Link views defaults on and synchronizes relative image centers; turning it off
+  permits independent panning. Same percentage zoom applies to both images.
+  Removed detail crops and X/Y sliders. Fit centers the complete image; scroll
+  is bounded to image edges and disabled when the complete image fits. Native
+  100% maps an image pixel to a UI raster pixel, enlargement uses nearest-neighbor
+  and reduction uses bicubic. Viewport resize events automatically redraw, using
+  affine sampling of visible pixels from cached pages and direct RGBA delivery
+  to BUI. No oversized scaled image buffers or temporary crop files introduced.
+  README updated. Checks: six desktop tests passed; replaced the earlier detail
+  hit test with actual wheel/Shift/Ctrl/drag events, linked/unlinked centers,
+  viewport bounds, immediate decoded pixels and resized Fit behavior. Live BUI
+  window check loaded an existing immutable horn-page preview, zoomed to 100%,
+  scrolled, switched to full-width Compare and closed cleanly. Both layout
+  screenshots were visually inspected. Python compilation and diff whitespace
+  passed. Full backend suite not repeated for this frontend-only change; worker,
+  generation, recipes and existing exports untouched. Relative linked viewports
+  are not geometric registration after augmentation. Exact next action: restart
+  desktop, generate a preview, zoom the main images and scroll/drag to inspect;
+  turn off Link views when independent positioning is preferred.
+
+- **2026-11-08 — Resizable Blender-style regions:** user requested resizing the
+  sidebars and viewports like Blender. Added reusable component-based region
+  dividers and rows using BUI pointer capture/cursors: one border at each sidebar
+  and one between source/augmented views. Drag redistributes only the adjacent
+  areas' width shares, with minima (source 180px, central viewer 320px, recipe
+  220px, image columns 120px each) enforced while dragging. Proportions scale with
+  the window; for windows below a pair's combined minimum the drag bounds scale
+  down proportionally. Border hover highlights and horizontal resize cursors
+  expose the interaction. Double-click resets the corresponding full row's
+  default proportions. Workspace visibility also hides unused dividers; the
+  remaining weights are preserved. No disk layout persistence or arbitrary
+  region splitting/joining added. Image resize notifications redraw the current
+  zoom/pan without generating a new preview. README updated.
+  Checks: seven desktop tests passed, including actual captured multi-motion
+  drags on all three borders, independent neighboring widths, minimum clamp,
+  automatic Fit redraw, cursor feedback, double-click reset, hidden borders and
+  preserved ratios across workspace changes. Request/displayed manifest identity
+  remained unchanged. Live BUI window check dragged all borders while showing
+  an existing horn preview, verified unequal viewport widths and Compare mode
+  visibility, and closed cleanly. Resized layout screenshot visually inspected;
+  Python compilation and diff whitespace passed. Backend suite not repeated for
+  this layout-only edit; source images, recipes, workers and exports unchanged.
+  Exact next action: restart desktop and drag the dark borders beside sidebars
+  or between the images; double-click a border to restore default widths.
+
+- **2026-11-08 — Native macOS file-dialog close crash repaired:** user reported
+  app termination when closing Save Recipe. Read the actual macOS crash report:
+  SIGABRT, objc autorelease-pool fatal path returning through BUI BK_window_run.
+  An unsandboxed probe confirmed native Cocoa availability; earlier sandboxed
+  probes reporting false did not establish that the wheel lacks a native host.
+  Corrected README/current-state backend description explicitly; historical
+  observations retained. Reproduced using the original blocking filebrowser.ask
+  from a native callback, closing its child window: method returned, then process
+  aborted (exit 134) with "Invalid or prematurely-freed autorelease pool".
+  Inspection found filebrowser.ask recursively pumps host.update/kit_pump inside
+  the main native loop. Replaced that path with `desktop_dialog.py`: same Blender
+  filebrowser node in a retained window/context, parent-window timer polling and
+  deferred close/callback disposal, with no nested event loop. Save/Open/Export
+  now return immediately; duplicate opens focus the existing child, cancellation
+  writes nothing, and main-window close disposes the child/cancels its timer.
+  Recipe bytes and preview ID are captured at dialog-open time so background
+  preview completion/control edits cannot change the selected export mid-dialog.
+  Exclusive-create writes still preserve existing files. README updated.
+  Checks: exact native reproduction survived after fix, followed by a native
+  end-to-end close-request, actual Cancel-button click, recipe save with extension,
+  recipe reopen, preview ZIP export and closing the main app with a browser open.
+  All passed with clean native event-loop exit. One attempted automated Escape
+  check did not dismiss the browser (focus/key routing) and hit the test deadline;
+  no native abort occurred. Replaced that test action with an actual Cancel-button
+  click; no claim of verifying Escape behavior. Native round-trip artifacts:
+  `/private/var/folders/c4/krtyyfns7mbgvrd43qzdkb8r0000gn/T/musvit-dialog-roundtrip-ykncqllx/`.
+  Eight desktop tests passed, including new cancellation, duplicate-window focus,
+  recipe/preview snapshots, no-overwrite error handling and owner-close regression.
+  Python compilation and diff whitespace passed. Full backend suite not repeated;
+  rendering, augmentation, workers and existing data/exports unchanged. Exact
+  next action: restart desktop and retry closing/cancelling Save Recipe; verify
+  the same behavior for Open Recipe and Export in normal use.
+
+- **2026-11-08 — Seeded parameter ranges in effect recipes:** user requested
+  ranges such as rotation ±3° and black/white threshold. Added optional numeric
+  `ranges` per step, retaining fixed parameters as fallbacks. Validates numeric
+  fields only, exactly two finite/in-bounds ordered endpoints and integer bounds
+  for integer properties. Samples independently per parameter using a local
+  SHA256-derived RNG from the existing stable effect seed; no global RNG changes,
+  reorder-dependent reassignment or changes to fixed recipes' effect records.
+  Integer bounds are inclusive, fractional properties sample continuously.
+  Effect manifests add requested_ranges, sampled_parameters and sampling rule
+  only for ranged steps; exact backend parameters remain recorded separately.
+  Desktop numeric controls now have Range checkbox and Min/Max fields, preserving
+  valid endpoint ordering. Rotation initially uses the existing full ±3° bounds;
+  other properties start at their current fixed value. New sample increments
+  recipe seed and generates another preview, reusing source engraving. Same-seed
+  Generate replays. Threshold range affects fixed mode only; automatic methods
+  retain their documented behavior. Save ranged recipes as schema v2 so older
+  apps reject them, while keeping fixed v1 and reading both. README updated;
+  source selection and existing root `scan-recipe.json` were preserved.
+  Checks: all 47 app tests passed, including range validation, pixel/record replay,
+  changed seed, reordering stability, integer endpoints and both rotation signs,
+  global RNG preservation, requested/resolved manifest ZIP contents and bilevel
+  export, UI checkbox/bounds interaction, v2 save/load and New sample wiring.
+  Native Cocoa desktop ran horn-page rotation [−3,3] + fixed threshold [140,180]:
+  seed 42 sampled −1.8483006425°/140; New sample seed 43 sampled −1.4253223358°/174;
+  another seed-43 Generate exactly matched all image/MusicXML hashes. Preview ZIP,
+  v2 recipe export and clean warm-worker shutdown passed. Artifacts:
+  `/private/tmp/musvit-range-desktop-20261108/`. Screenshot QA also revealed that
+  live Retina captures must use the actual window raster, not the initial logical
+  size; updated the screenshot helper accordingly. Visually inspected controls at
+  actual 3024x1678 native size, and headless screenshot/compilation/whitespace
+  checks passed. No scanner calibration, batch dataset export or training added;
+  these remain exploratory ranges. Web backend accepts ranges, but its frontend
+  range controls were not added. Exact next action: restart desktop, set rotation
+  Range −3…3 and a fixed threshold interval, then use New sample to compare
+  realizations while checking notation legibility at model resolution.
+
+- **2026-11-08 — Editable current values with Range enabled:** user requested
+  keeping the slider editable when Range is selected and showing the value used
+  in the current preview. Sliders now remain enabled, constrained to their range
+  endpoints, and synchronize without callbacks to actual resolved values when
+  a current-settings preview finishes. More recent mid-render edits are retained.
+  Editing a ranged slider sets separate per-step/property preview_values for
+  Generate; sampling bounds stay unchanged. Backend validates those choices
+  against active numeric ranges, applies them after seeded sampling, and records
+  preview_overrides alongside requested ranges/resolved/backend parameters.
+  Preview request/settings preserve exact overrides for replay; recipe JSON does
+  not pin the distribution to a preview choice. New sample clears overrides
+  before advancing seed; preset/recipe replacement clears stale choices.
+  Disabling Range keeps the shown value as the fixed value. Bounds edits clamp
+  current values and any manual override. README updated; existing recipe files,
+  source images, immutable previews and exports preserved.
+  Checks: all 49 app tests passed. New backend test verifies exact manual
+  rotation/threshold pixels equal fixed-value execution, unchanged ranges and
+  rejection of unknown/out-of-range/noninteger/nonfinite overrides; ZIP test
+  checks override serialization. New UI test verifies sampled slider sync,
+  editability, exact request values, preserved stale edits and New sample reset.
+  Native Cocoa full-page check confirmed actual slider dragging with Range on,
+  seed-42 synchronization (−1.8483006425°, threshold 140), exact edited preview
+  (1.5°, threshold 170), unchanged ranges [−3,3]/[140,180], and resumed seed-43
+  sampling (−1.4253223358°, threshold 174). Exported manual-preview ZIP and clean
+  shutdown passed; screenshot visually inspected. Artifacts:
+  `/private/tmp/musvit-edit-ranged-preview-20261108/`. Python compilation and diff
+  whitespace passed. Preview edits still require Generate; no automatic render
+  on every slider movement or training/dataset change added. Exact next action:
+  restart desktop, generate a ranged preview, edit its value slider and Generate;
+  use New sample to return to random choices within the saved bounds.
+
+- **2026-11-08 — Existing recipe saves retain range selections:** user reported
+  Range selections lost after save/reload. Inspection found serialization/load
+  already retain active ranges, but Save used the export-only exclusive-create
+  writer, rejecting an existing filename and leaving its older settings on disk.
+  Existing root `scan-recipe.json` was still v1 without ranges; it was read only
+  during diagnosis and left unchanged. Added a recipe-specific atomic writer:
+  save prior bytes exclusively under sibling `.recipe-backups/`, write/fsync a
+  same-directory temporary file, atomically replace the chosen recipe, and remove
+  staging files on failure. Identical content avoids unnecessary backups. ZIP
+  exports retain the existing refusal to overwrite. Save/Open remember the last
+  loaded/saved path, prefill its directory/name and report the actual path.
+  Backup history is ignored by Git. README updated; no existing user file was
+  migrated or overwritten by the agent.
+  Checks: all 11 desktop tests passed. New regression starts with fixed v1,
+  enables rotation/threshold ranges through UI, saves over that file, verifies
+  v2 ranges and exact old-byte backup, reloads and checks both Range checkboxes
+  and endpoints. Simulated atomic-replace failure preserves original bytes and
+  leaves no staging files. Existing async snapshot test now verifies successful
+  backed-up updates rather than expected overwrite rejection. Native Cocoa
+  dialog round trip confirmed updating an existing temporary file, backup,
+  reopening enabled rotation [−2.5,2.5] and threshold [130,185], and clean exit.
+  Artifact directory:
+  `/private/var/folders/c4/krtyyfns7mbgvrd43qzdkb8r0000gn/T/musvit-range-save-yrqj6lrf/`.
+  Python compilation and diff whitespace checked. Full backend suite not repeated
+  for this save-path-only fix; previous backend results remain recorded above.
+  Exact next action: restart desktop, enable desired ranges and Save to the
+  existing recipe filename, then Open it and confirm the restored bounds.
+
+- **2026-11-08 — Entire lab projects and multi-level comparisons:** user changed
+  the save unit from separate recipes to the full project, with several degradation
+  levels, side-by-side Compare and saved previews/curriculum choices. Added
+  `lab_project.py` project schema/ZIP asset writer/validated restore and seven
+  project integration tests. Main UI now has Save project/Open project (Ctrl+S
+  saves project), independent level selection/name/seed/recipe/ranges/manual
+  choices, Add/Duplicate/Remove/Move left/right, and editable Clean/Mild/Moderate/
+  Heavy starter levels (not measured severity classes). Compare uses resizable
+  source + all-level viewports and Generate all levels, submitting sequential
+  requests to the existing warm worker with shared source-cache reuse. Selected
+  generation/export stays separate; switching editor level during a request
+  preserves result ownership. Source/settings changes mark old comparison columns;
+  per-job failures retain older previews while successful jobs continue.
+  `.musvitlab` contains project.json, exact native/model source/augmented PNGs,
+  manifests/hashes and synthetic MusicXML for all displayed level previews, plus
+  the currently selected real scan page when applicable. It stores active level,
+  stage/example/font/music seed/document/page, all recipes/seeds/manual preview
+  overrides and pending edits, view mode/zoom/pan/linking/region widths/theme and
+  sidebar/effect collapse state. Reopening displays saved previews without render
+  and restores controls; copied scan pages remain project-local source assets,
+  without importing/approving annotation history. Validates archive sizes/schema,
+  entry whitelist, checksums and image data before restoration. Existing matching
+  immutable artifacts are reused; conflicts get a new preview ID, preserving local
+  files. Atomic file updates retain `.project-backups/`; bundles/backups are Git
+  ignored. JSON v1/v2 recipe imports remain supported for the selected level.
+  README updated; existing user `scan-recipe.json`/exports were not migrated.
+  Checks: all 57 app tests passed in 14.411s. Project tests cover full state and
+  exact asset hashes after loading into an empty data folder, stale displayed
+  preview versus pending slider overrides, independent levels/duplicate/order,
+  portable real scan/no annotation DB, corrupt/unexpected archive rejection,
+  conflicting preview IDs without replacement, dialog-open snapshots/backup
+  updates, and changing selected level while rendering. Existing app/worker/
+  range/native-failure server tests remain passing. Native Cocoa integration
+  generated all four Petaluma horn-page levels from music seed 19 with identical
+  source image hashes, saved via the project dialog, changed editor/source state,
+  reopened via the project dialog, and checked exact project-document equality,
+  restored five comparison viewports, manual rotation 1.25°, range controls and
+  current layout. Warm worker closed cleanly. Artifacts:
+  `/private/var/folders/c4/krtyyfns7mbgvrd43qzdkb8r0000gn/T/musvit-whole-project-mn3bgzyy/`.
+  Compare/restored screenshots were generated and restored layout visually
+  inspected. Python compilation and diff whitespace passed. Limits: eight levels,
+  512 MiB uncompressed bundle; only selected scan page/preview assets are portable,
+  not the whole scan collection or annotation database. Names/preset severity are
+  editable proposals, not calibrated training distributions. No batch training
+  dataset or model/training change added. Exact next action: restart desktop,
+  configure levels and common curriculum source, Generate all levels in Compare,
+  then Save project; import older recipe JSON into a selected level as needed.

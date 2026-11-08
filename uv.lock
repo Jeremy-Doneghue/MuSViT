@@ -380,6 +380,30 @@ css = [
 ]
 
 [[package]]
+name = "blenderui"
+version = "0.4.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/24/03/27cafabd49a52daca85748944b144e1c34a46141aca9e2a1083f559a7d47/blenderui-0.4.1.tar.gz", hash = "sha256:171d2d29e33e52d633901299c8297163899fc123bc806e3bf04ad4b99f695971", size = 29486943, upload-time = "2026-11-06T16:24:14.97Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/14/44/14d0cadc784bdc3b0fea5a743f9a59058e7d8e6da3d038403cb8b70687c1/blenderui-0.4.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:050eabc8d398e647c70c8c45e42500f0fab699e97b40310d38c6ed742de8356f", size = 2622673, upload-time = "2026-11-06T16:23:46.387Z" },
+    { url = "https://files.pythonhosted.org/packages/f1/a3/ba9a866515e4027b7b5e1d79721119540b884fcc8635a83454765b5cb5bf/blenderui-0.4.1-cp311-cp311-macosx_11_0_x86_64.whl", hash = "sha256:a336b9b58a598c24651a569113656e2ad19433e5e1010295405efadbb7f13b1f", size = 2757925, upload-time = "2026-11-06T16:23:48.183Z" },
+    { url = "https://files.pythonhosted.org/packages/0e/14/cc7d76fdf673ffcac71f5851a7ca30b925dc7d0e78eaef4d385b7df990ae/blenderui-0.4.1-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b25014f8aa972f9b1ac87981448da799a40b148a316f2af632f21cce2a3d7727", size = 2875779, upload-time = "2026-11-06T16:23:49.858Z" },
+    { url = "https://files.pythonhosted.org/packages/95/9c/db67b0246cdb8359e21f2e42844577832cbb74c146c73103b6164594d4a9/blenderui-0.4.1-cp311-cp311-win_amd64.whl", hash = "sha256:0cf30166c1bc9d12caa2b4fe9bcbea1d7ada5b44efe23434b03b391bf0f0c642", size = 3216960, upload-time = "2026-11-06T16:23:51.453Z" },
+    { url = "https://files.pythonhosted.org/packages/17/54/ab675588a5c9e5567bd7f059d62e6f4b9a5d2bdfd1531fdef4f5db44256e/blenderui-0.4.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:bb045ab51c3d9de8bb4c4c746d6e3b0a0325f9dde2b1b077fefa90fe0441af13", size = 2621991, upload-time = "2026-11-06T16:23:53.024Z" },
+    { url = "https://files.pythonhosted.org/packages/63/c0/3e24e80d9b968fbbb588aa9cb4e20a26df83fb699c94711a6c829e25c466/blenderui-0.4.1-cp312-cp312-macosx_11_0_x86_64.whl", hash = "sha256:bda8fd9cae8c127e9ee16da035291c2f51be9ef0a891302dea7771fb8c672b9d", size = 2758843, upload-time = "2026-11-06T16:23:55.118Z" },
+    { url = "https://files.pythonhosted.org/packages/aa/c6/32b603ab854d5bfa3475ff1996140c3028670c2874d8d2454ca296421367/blenderui-0.4.1-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:c71aa1455c42f11119a4e2362484d3a7ee01ee324e74d6b9b0013b2a2326d545", size = 2876137, upload-time = "2026-11-06T16:23:56.778Z" },
+    { url = "https://files.pythonhosted.org/packages/af/4d/e61beb98be7c57352bc91c86a4c8ac1ea1366b345055e2cd33bcc4254736/blenderui-0.4.1-cp312-cp312-win_amd64.whl", hash = "sha256:b3a6ad671aa969a86dd0c0e694d3559dc56419c9122e614e56f39b46f926877d", size = 3216714, upload-time = "2026-11-06T16:23:58.644Z" },
+    { url = "https://files.pythonhosted.org/packages/39/ab/89bbbc3d670830f275ecdd291eaea149722652b6886d554ab14b02856411/blenderui-0.4.1-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:9575fe2f234bbbc01ab7477f4b7eb1367b4c3406c6341b8ba7682c81165a5d3c", size = 2622040, upload-time = "2026-11-06T16:24:00.357Z" },
+    { url = "https://files.pythonhosted.org/packages/4f/05/b4978c3cd2642bc81b90d7773e06ec5784419913364fc4a61a202801ab53/blenderui-0.4.1-cp313-cp313-macosx_11_0_x86_64.whl", hash = "sha256:2901a66a689e7f1aa6da3b7be794ac3cd67437c996b68877d47bf198f3140268", size = 2758868, upload-time = "2026-11-06T16:24:02.4Z" },
+    { url = "https://files.pythonhosted.org/packages/cc/54/7d6df11f8efd981505a563cb7dcbbd22ec3b7ce42323c5dc99b1ff3e3601/blenderui-0.4.1-cp313-cp313-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:3ec17b09860d9275cf256cb5b1fabb43273372744736459014d9f7824f4dfb9d", size = 2876106, upload-time = "2026-11-06T16:24:04.144Z" },
+    { url = "https://files.pythonhosted.org/packages/67/e5/0cf6e3e16bd51cc3774c5bb4c64467279ac87c3943beb7f0bf54636abf52/blenderui-0.4.1-cp313-cp313-win_amd64.whl", hash = "sha256:e04c1824760a00aa7099f1bf0442584a664e7c42760b5ef6e7e804a7760037b2", size = 3216723, upload-time = "2026-11-06T16:24:05.753Z" },
+    { url = "https://files.pythonhosted.org/packages/07/de/52d11ae134967a99abe22acce0988270f686c550c4675221379d4149bce3/blenderui-0.4.1-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:df5d66d01a649d31dae4807abd3e7a8c442fe2a42db108852e262776ee40d160", size = 2621753, upload-time = "2026-11-06T16:24:07.493Z" },
+    { url = "https://files.pythonhosted.org/packages/d7/25/dfa37d82d33e7b4dbc8ea9171a6cd25260e2e58a45619a9e860868f671a4/blenderui-0.4.1-cp314-cp314-macosx_11_0_x86_64.whl", hash = "sha256:d6f63e3c3307ab648e08185abb1cfb741261d9c5db9676428458c167b8291cab", size = 2758760, upload-time = "2026-11-06T16:24:09.241Z" },
+    { url = "https://files.pythonhosted.org/packages/9a/49/2ed01ef2ef98522363b357c33bf40a31900ea53a09404a559177476eaf20/blenderui-0.4.1-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:06e5592de29c5251c1a122730b1be3872bbee60c7eb644fc179968f9fe21ea20", size = 2876023, upload-time = "2026-11-06T16:24:11.011Z" },
+    { url = "https://files.pythonhosted.org/packages/b1/93/0f80833aa526901c1bfddc545895dd6fb2eda19638cdd27cf02300a16cf2/blenderui-0.4.1-cp314-cp314-win_amd64.whl", hash = "sha256:32c5a981bc662a4b7fea6cfc1714ea35de46b434fcddfb953b037acdfb325920", size = 3301371, upload-time = "2026-11-06T16:24:12.688Z" },
+]
+
+[[package]]
 name = "brotli"
 version = "1.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -4083,6 +4107,11 @@ dependencies = [
     { name = "wandb" },
 ]
 
+[package.optional-dependencies]
+desktop = [
+    { name = "blenderui" },
+]
+
 [package.dev-dependencies]
 notebooks = [
     { name = "ipykernel" },
@@ -4093,6 +4122,7 @@ notebooks = [
 requires-dist = [
     { name = "albumentations", specifier = ">=2.0.0" },
     { name = "augraphy", specifier = ">=8.2,<9" },
+    { name = "blenderui", marker = "extra == 'desktop'", specifier = "==0.4.1" },
     { name = "cairosvg", specifier = ">=2.7.1" },
     { name = "datasets", specifier = ">=3.3.1" },
     { name = "dotenv", specifier = ">=0.9.9" },
@@ -4119,6 +4149,7 @@ requires-dist = [
     { name = "verovio", specifier = "==5.0.0" },
     { name = "wandb", specifier = ">=0.22.2" },
 ]
+provides-extras = ["desktop"]
 
 [package.metadata.requires-dev]
 notebooks = [

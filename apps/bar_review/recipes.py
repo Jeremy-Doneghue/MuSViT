@@ -2,7 +2,9 @@
 from copy import deepcopy
 import hashlib
 import math
+import random
 import re
+import time
 
 import numpy as np
 from PIL import Image
@@ -57,6 +59,14 @@ PRESETS = {
 }
 
 
+def numeric_value(value, field):
+    if isinstance(value,bool) or not isinstance(value,(int,float)) or not math.isfinite(value) or not field['min']<=value<=field['max']:
+        raise ValueError(f'{field["label"]} must be between {field["min"]} and {field["max"]}')
+    if field['step']==1 and not float(value).is_integer():
+        raise ValueError(f'{field["label"]} must be an integer')
+    return int(value) if field['step']==1 else float(value)
+
+
 def validate(recipe):
     if not isinstance(recipe,list) or len(recipe)>12:
         raise ValueError('Recipe must be a list of at most 12 effects')
@@ -81,29 +91,86 @@ def validate(recipe):
                 if value not in field['options']:
                     raise ValueError(f'Invalid {field["label"]}')
             else:
-                if isinstance(value,bool) or not isinstance(value,(int,float)) or not math.isfinite(value) or not field['min']<=value<=field['max']:
-                    raise ValueError(f'{field["label"]} must be between {field["min"]} and {field["max"]}')
-                if field['step']==1 and not float(value).is_integer():
-                    raise ValueError(f'{field["label"]} must be an integer')
-                value = int(value) if field['step']==1 else float(value)
+                value = numeric_value(value,field)
             normalized[key]=value
-        result.append(dict(id=identity,type=item['type'],enabled=item.get('enabled',True),parameters=normalized))
+        ranges = item.get('ranges',{})
+        if not isinstance(ranges,dict) or set(ranges)-set(fields):
+            raise ValueError('Unknown effect range parameter')
+        normalized_ranges = {}
+        for key,bounds in ranges.items():
+            field = fields[key]
+            if 'options' in field or not isinstance(bounds,(list,tuple)) or len(bounds)!=2:
+                raise ValueError(f'{field["label"]} range requires numeric minimum and maximum')
+            low,high = [numeric_value(value,field) for value in bounds]
+            if low>high:
+                raise ValueError(f'{field["label"]} range minimum must not exceed maximum')
+            normalized_ranges[key]=[low,high]
+        record = dict(id=identity,type=item['type'],enabled=item.get('enabled',True),parameters=normalized)
+        if normalized_ranges:
+            record['ranges']=normalized_ranges
+        result.append(record)
     return result
 
 
-def apply(image, recipe, seed, rotate):
-    from augraphy import BadPhotoCopy, BindingsAndFasteners, Geometric, InkBleed, PageBorder
-    from augraphy import DirtyDrum, DirtyRollers, DirtyScreen, LinesDegradation, LowInkPeriodicLines, LowInkRandomLines, Markup, SubtleNoise
-    from experiments.scan_degradation.generate import PROFILES, LIBRARY_SCAN, _seeded
+def sample_parameters(item, effect_seed):
+    """Resolve validated ranges without touching Python/NumPy global RNGs."""
+    parameters = dict(item['parameters'])
+    for key,(low,high) in item.get('ranges',{}).items():
+        seed = int.from_bytes(hashlib.sha256(f'range:{effect_seed}:{key}'.encode()).digest()[:8],'big')
+        rng = random.Random(seed)
+        parameters[key] = (rng.randint(low,high) if EFFECTS[item['type']]['fields'][key]['step']==1
+                           else rng.uniform(low,high))
+    return parameters
+
+
+def validate_preview_values(recipe, values):
+    """Manual preview choices affect the preview, not the saved distribution."""
+    if not isinstance(values,dict):
+        raise ValueError('Preview values must be an object')
+    steps={item['id']:item for item in recipe}
+    result={}
+    for identity,parameters in values.items():
+        if identity not in steps or not isinstance(parameters,dict):
+            raise ValueError('Unknown preview effect')
+        step=steps[identity]
+        normalized={}
+        for key,value in parameters.items():
+            if key not in step.get('ranges',{}):
+                raise ValueError('Preview values require an active numeric range')
+            value=numeric_value(value,EFFECTS[step['type']]['fields'][key])
+            low,high=step['ranges'][key]
+            if not low<=value<=high:
+                raise ValueError('Preview value must be within its range')
+            normalized[key]=value
+        if normalized:
+            result[identity]=normalized
+    return result
+
+
+def apply(image, recipe, seed, rotate, on_step=None, preview_values=None):
+    recipe = validate(recipe)
+    preview_values=validate_preview_values(recipe,preview_values if preview_values is not None else {})
+    active = [item for item in recipe if item['enabled']]
+    # Pillow/OpenCV-only recipes need none of Augraphy's expensive imports.
+    if any(item['type'] not in {'rotation', 'scan_dpi', 'black_white'} for item in active):
+        from augraphy import BadPhotoCopy, BindingsAndFasteners, Geometric, InkBleed, PageBorder
+        from augraphy import DirtyDrum, DirtyRollers, DirtyScreen, LinesDegradation, LowInkPeriodicLines, LowInkRandomLines, Markup, SubtleNoise
+        from experiments.scan_degradation.generate import PROFILES, LIBRARY_SCAN, _seeded
     output, records = image.copy(), []
-    for position,item in enumerate(validate(recipe)):
+    for position,item in enumerate(recipe):
         if not item['enabled']:
             continue
+        step_index = len(records)
+        if on_step:
+            on_step(step_index, len(active), EFFECTS[item['type']]['label'], None)
+        started = time.perf_counter()
         if output.width*output.height > 16_000_000:
             raise ValueError('Recipe canvas is too large; reduce padding or border steps')
-        kind, p = item['type'], item['parameters']
+        kind = item['type']
         # Stable identity keeps each effect's random stream when reordering it.
         effect_seed = int.from_bytes(hashlib.sha256(f'{seed}:{item["id"]}'.encode()).digest()[:4],'big')
+        p = sample_parameters(item,effect_seed)
+        p.update(preview_values.get(item['id'],{}))
         before = list(output.size)
         if kind=='black_white':
             import cv2
@@ -194,4 +261,11 @@ def apply(image, recipe, seed, rotate):
                             execution='python-no-jit' if kind=='dirty_rollers' else 'default',
                             input_dimensions=before,output_dimensions=list(output.size),
                             geometry_changed=kind in {'scanner_edge','framing','page_border'} or (kind=='rotation' and p['angle']!=0) or (kind=='scan_dpi' and before!=list(output.size))))
+        if item.get('ranges'):
+            records[-1].update(requested_ranges=item['ranges'],sampled_parameters=p,
+                               range_sampling='uniform-independent-parameter-v1')
+        if item['id'] in preview_values:
+            records[-1]['preview_overrides']=preview_values[item['id']]
+        if on_step:
+            on_step(step_index, len(active), EFFECTS[item['type']]['label'], time.perf_counter()-started)
     return output,records

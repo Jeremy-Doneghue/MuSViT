@@ -38,6 +38,235 @@ Restart the Python server after updating its code.
 
 ## Workflow
 
+### Desktop Curriculum Lab (BUI)
+
+The desktop lab uses [BUI](https://github.com/ppmpreetham/BUI)'s Python Blender
+components. It runs directly against the existing Python curriculum backend;
+no HTTP server, browser, notation-editor dependencies or Blender installation
+is needed.
+
+```bash
+uv sync --extra desktop
+.venv/bin/python apps/bar_review/desktop.py
+```
+
+On macOS, double-click `launch_curriculum.command` in this folder after installing
+the extra. The launcher uses the checkout's `.venv`, supplies the Homebrew Cairo
+library path when available and puts Matplotlib's cache in the temporary directory.
+The Python entry point also detects the documented Homebrew Cairo path for preview
+workers. Other platforms need the same Verovio/Cairo setup as the web lab.
+
+The top workspace bar follows Blender's layout:
+
+- **Curriculum:** stage/source properties, paired page viewer, scan recipe stack.
+- **Scan Recipe:** paired viewer and more room for effect properties.
+- **Compare:** the source and every degradation level side by side.
+- **Manifest:** provenance and parameters of the selected level's preview.
+
+The lab is a **project**, starting with editable Clean, Mild, Moderate and Heavy
+levels. Select a level in the recipe sidebar to edit its independent recipe, seed,
+ranges and manual preview choices. Add, duplicate, rename, remove or reorder levels
+(up to eight). Initial recipes are exploratory starters, not calibrated severity
+boundaries or approved curriculum mixes. All levels share the selected curriculum
+source so their appearances can be compared fairly.
+
+In **Compare**, **Generate all levels** renders the selected source through each
+level on the warm worker, reusing its engraving. Columns have resizable widths and
+the existing linked zoom/pan controls. **Generate selected level** updates only the
+current editor selection. Missing previews show a placeholder; changed source,
+recipe or seed settings mark older columns as **settings changed** until regenerated.
+A batch failure retains previous previews and reports the error; successful
+levels still finish. Changing editor selection while rendering does not attach
+the result to the wrong level.
+
+**Save project** (Ctrl+S) creates one `.musvitlab` file containing:
+
+- Every level's name, order, recipe/effect IDs, enabled steps, numeric ranges,
+  seed, manual preview choices, selected starting recipe and collapsed panels.
+- Selected curriculum stage/example, font, music seed and imported scan/page.
+- Each level's exact most recent preview: source/augmented PNGs, native/model
+  inputs, manifest/hashes and synthetic MusicXML when available.
+- Active level/workspace, resolution, zoom, linked state, pan centers, region
+  proportions and theme.
+
+**Open project** restores those previews immediately without rendering, including
+in a different data folder. For Real scans, the selected source page is embedded
+so generation can continue without the original import. Other pages and annotation
+history are not bundled. Opening a project does not create or approve annotations.
+Preview assets are verified before import. Identical local artifacts are reused;
+conflicting immutable preview IDs are restored under new IDs. Projects have a
+512 MiB uncompressed limit. The ZIP-based bundle is not a training dataset export.
+
+Project saves atomically update the chosen file and retain its prior version in
+`.project-backups/`. Save/Open remember the current project folder/filename.
+The file captures the workspace when Save is clicked, including older displayed
+previews and pending edits; saving does not generate images. Opening a project is
+blocked while rendering. Old v1/v2 recipe JSON can be opened through **Open project**
+to import settings into the selected level, then saved as part of the full project.
+
+Switching workspaces preserves the source, recipe and displayed preview. All five
+stages, eight synthetic examples, three fonts and all 17 ordered effects come from
+the shared catalog. Recipes support repeated effects, bypass, removal, Up/Down and
+Blender panel-grip dragging; the executed order follows the visible order.
+
+Drag the narrow borders beside either sidebar to adjust its width, or the border
+between the source and augmented images to resize those viewports. The pointer
+changes to a horizontal resize cursor and the border highlights on hover.
+Neighboring areas resize together with minimum widths while dragging. Double-click
+a sidebar border to restore the default sidebar layout; double-click the image
+divider to restore equal image widths. Proportions remain in the current session
+across workspace switches and scale with the window. Hidden sidebars also hide
+their dividers. Viewports redraw automatically, preserving zoom and pan settings.
+
+**Add Effect** opens a Blender-style popup with Paper & framing, Ink & printing,
+Dirt & interference and Scan & geometry submenus. Choose an effect to append it
+immediately, or start typing to search across all categories. Escape dismisses
+the menu. The button disables at the 12-step limit.
+
+Drag numeric properties or click to enter exact values. Preview ZIP exports remain
+separate from projects: they export only the selected level's displayed preview
+and refuse to overwrite an existing export.
+
+Every numeric property has a **Range** checkbox. Enable it to show **Min / Max**
+bounds beneath the editable value slider. Rotation
+starts with −3° to +3°. Other properties start with both endpoints at the current
+fixed value until edited. For example, choose Black & white scan → `fixed`, enable
+Range beside Threshold, then set Min 140 and Max 180. Threshold ranges apply only
+to fixed thresholding; Otsu chooses its threshold automatically and adaptive mode
+uses the radius/offset properties. Moving a bound past its partner moves the
+partner too, keeping a valid interval. Existing property limits still apply.
+
+After a preview finishes, a ranged slider shows that preview's resolved value.
+It stays editable within Min/Max: change it and click **Generate preview** to try
+that exact value while retaining the range. Pending edits made during rendering
+are preserved instead of being overwritten by the finishing preview. Disabling
+Range keeps the currently shown value as a fixed setting. Bounds remain the saved
+sampling distribution. Projects also retain manual preview choices; **New sample**
+clears those choices for the selected level and samples again.
+The preview manifest/request records manual choices as `preview_values` and
+per-effect `preview_overrides`, so the displayed result remains reproducible.
+
+Each active range samples uniformly for a preview: inclusive integer bounds for
+integer properties, continuous values for fractional properties. The recipe seed,
+step's stable ID and property name determine the sample independently of order
+or other ranged properties. Generating with the same seed and manual choices
+repeats the result.
+**New sample** advances the recipe seed and generates another realization, reusing
+the source engraving where possible. Original bounds and resolved values appear
+in the exported manifest (`requested_ranges`, `sampled_parameters`); backend
+parameters still record the values actually applied. Legacy ranged recipe JSON
+uses version 2, fixed recipe JSON uses version 1, and both can be imported into
+the current project's selected level.
+
+Save, Open and Export use non-blocking Blender-style file browser windows.
+Closing a browser window or choosing Cancel leaves the main app running; reopening
+a file operation while a browser is already open brings that browser forward.
+Save captures the project when its dialog opens, and Export captures the selected
+preview at that moment, even if controls or a background preview change meanwhile.
+Closing the main app also closes its file browser. This avoids BUI 0.4.1's nested
+native macOS event-loop crash on file-dialog dismissal.
+
+Choose **Native** or **Model 1024** for the image viewports. Each main image
+zooms and pans directly; there is no separate detail section. Use **Fit** to see
+the whole page, the percentage selector for 25–400%, or the **− / +** buttons.
+At 100%, one image pixel occupies one UI raster pixel; magnification uses nearest
+neighbor to expose actual pixels, while reductions use bicubic sampling.
+Scroll vertically, Shift+scroll horizontally, drag to pan, or Ctrl+scroll to zoom.
+Arrow keys also pan. **Link views** synchronizes relative centers; turn it off to
+pan either image independently. Zoom applies to all displayed images. Resizing the window
+or switching workspaces automatically redraws the viewports at their new size.
+Fit mode centers the entire image and scrolling has no effect until it exceeds
+the viewport. Geometry-changing effects do not produce registered views.
+
+The desktop starts **one persistent preview process** in the background when its
+window opens. It preloads engraving and Augraphy dependencies once, and its main
+thread processes submitted jobs serially. The progress bar shows warmup and then
+**Preview worker ready**. **Generate preview** (Ctrl+Enter) submits a job to that
+warm process, with a 120-second per-job deadline. Controls stay responsive. Editing during rendering marks
+the result as belonging to earlier settings. **Export preview ZIP** always
+exports the displayed immutable preview, including its original request, images,
+hashes and MusicXML where available. Full worker errors also print to the terminal.
+
+The progress bar names the active phase/effect and shows elapsed wall time. It
+advances at pipeline milestones, not an estimated percentage of execution time:
+a slow effect can hold the bar while the clock continues. The manifest includes
+source/augmentation/image-save timings and individual ordered-effect durations;
+augmentation time includes dependency initialization, while worker time excludes
+the initial worker warmup and final UI display. Native process crashes, lost
+connections and timeouts retire the worker; the next preview automatically starts
+a replacement. Invalid settings return an error while leaving the worker ready.
+Closing the desktop stops both idle and active workers. Jobs are not automatically
+replayed after a native crash.
+
+The shared executor avoids unnecessary Augraphy imports for clean, rotation-only,
+DPI-only and threshold-only recipes; the desktop's eager warmup deliberately loads
+Augraphy once so later recipe changes need no additional dependency startup.
+The desktop also remembers up to 64 synthetic
+source selections per session and reuses an intact previous engraving when only
+the recipe/augmentation seed changes. Source inputs, relevant code and dependency
+versions must match, and PNG/MusicXML hashes are verified. A missing/corrupt source
+falls back to fresh rendering. Every resulting preview still has a new immutable
+folder. Real scans are loaded from their current page files. Detail panning reuses
+decoded pages and supplies only visible in-memory pixels instead of writing/reopening PNGs.
+
+Earlier **fresh-worker** measurements on this Mac with a Leipzig horn page, music seed 7 and recipe seed 42
+(one unprofiled run per case; ordinary timing variation applies):
+
+| Preview | Before | After |
+| --- | --- | --- |
+| Clean, fresh source | 2.07 s | 0.90 s |
+| Clean, reused source | 2.07 s | 0.14 s |
+| Light-copy, reused source | 2.19 s | 1.38 s |
+| Bound-copy, reused source | 2.74 s | 2.12 s |
+
+All image/MusicXML artifact hashes matched the baseline in those comparisons.
+BadPhotoCopy itself took 0.04 s in the optimized light-copy run; most of its
+remaining augmentation time was loading dependencies. The current desktop keeps
+that process warm while retaining process-level crash containment. Repeated
+two-bar light-copy previews across Leipzig, Bravura and Petaluma measured
+0.27–0.39 s after one 2.39 s warmup, using the same process throughout. This is
+a local check, not a timing guarantee; initial startup may be much slower on other
+machines. Larger scans and different effects can take substantially longer.
+Warm workers/progress/source reuse are desktop features; the web server retains
+one process per preview. Conditional imports and timing manifests also benefit
+web previews. Restart the desktop to load these changes.
+
+`--data-dir /path/to/bar-review-data` shares the web app's imported scan collection
+and preview folders. The desktop reads `annotations.sqlite3` read-only and never
+initializes an absent database. Import scans with Bar Review, then **Refresh imported
+scans** in the desktop's Real scans stage. The web server can be stopped while
+using those scans in the desktop. A new preview gets its own unique directory;
+existing exports, scans and annotations are preserved.
+
+The tested package is `blenderui==0.4.1`. Native Cocoa windows are supported on this
+Mac and were verified outside the execution sandbox. Earlier sandboxed probes
+reported no native host and used BUI's Tk fallback; this was an environment
+restriction, not a missing backend in the wheel. Blender components use BUI's
+C kit in both hosts. GPU acceleration has not been verified in this app.
+The viewer supplies Pillow-decoded RGBA pixels directly to BUI: the wheel's
+asynchronous file-image wake caused a reproduced macOS/Tk native crash while
+invoking a Python redraw callback. Direct pixels avoid that callback path;
+unchanged full-page buffers are reused when moving the detail focus.
+Windows/Linux hosting depends on BUI's available backend. This is a source-launched
+desktop application, not a bundled/signed `.app` or installer.
+
+For reproducible UI inspection without a desktop window:
+
+```bash
+.venv/bin/python apps/bar_review/desktop.py --screenshot /tmp/curriculum.png
+.venv/bin/python apps/bar_review/desktop.py --workspace Compare --theme light
+```
+
+The screenshot option renders the initial UI only. BUI integration tests are
+included in the check command below when the desktop extra is installed and skip
+otherwise. They exercise workspace clicks, native panel dragging, image layout/hit
+testing, shared read-only scans, request snapshots, failed-worker recovery, recipe
+validation and immutable ZIP exports. The same exploratory/calibration limits
+as the web lab apply. Persistent-worker checks additionally cover repeated
+cross-font deterministic replay, equivalent one-shot output, same-process reuse,
+fatal exit and timeout recovery, validation errors, startup deadlines and closing
+an active job.
+
 ### Curriculum Lab
 
 Choose **Curriculum Lab** in the sidebar, or open

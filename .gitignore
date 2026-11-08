@@ -248,6 +248,10 @@ slurm_log/
 
 # OS files
 .DS_Store
+.recipe-backups/
+.project-backups/
+# Local lab bundles include generated previews and source scan pages.
+*.musvitlab
 
 
 # Other local artifacts

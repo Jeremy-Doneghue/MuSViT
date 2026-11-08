@@ -5,11 +5,13 @@ import hashlib
 from importlib.metadata import version
 import io
 import json
+import os
 from pathlib import Path
 import sys
 import subprocess
 import tempfile
 import threading
+import time
 import uuid
 import zipfile
 
@@ -40,7 +42,7 @@ def catalog():
                 profiles=["clean", "light-copy", "library-scan"], status="Proposed curriculum · exploration only")
 
 
-def preview_isolated(data, payload, documents):
+def preview_isolated(data, payload, documents, *, progress=None, source_preview=None):
     """Keep native renderer state and fatal C++ errors out of the HTTP server.
 
     Each invocation gets its own main thread, resource initialization and RNG.
@@ -49,19 +51,44 @@ def preview_isolated(data, payload, documents):
     """
     with tempfile.TemporaryDirectory(prefix="musvit-preview-worker-") as temp:
         result_path = Path(temp) / "result.json"
+        progress_path = result_path.with_suffix('.progress.json')
+        stop = threading.Event()
+
+        def observe():
+            previous = None
+            while not stop.wait(.08):
+                try:
+                    value = json.loads(progress_path.read_text())
+                except (OSError, ValueError):
+                    continue
+                if value != previous:
+                    progress(value)
+                    previous = value
+
+        observer = None
+        if progress:
+            progress(dict(label='Starting preview worker', fraction=0.02))
+            observer = threading.Thread(target=observe, daemon=True)
+            observer.start()
         try:
             process = subprocess.run(
                 [sys.executable, str(Path(__file__).resolve()), "--worker",
                  str(Path(data).resolve()), str(result_path)],
-                input=json.dumps(dict(payload=payload, documents=documents)),
+                input=json.dumps(dict(payload=payload, documents=documents, source_preview=source_preview)),
                 text=True, capture_output=True, timeout=120)
         except subprocess.TimeoutExpired as error:
             raise RuntimeError("Preview generation exceeded 120 seconds. Try a simpler example; the server is still running.") from error
+        finally:
+            stop.set()
+            if observer:
+                observer.join()
         if process.returncode != 0:
             detail = (process.stderr or process.stdout).strip()[-4000:]
             raise RuntimeError(f"Preview renderer failed (exit {process.returncode}). The server is still running.\n{detail}")
         if not result_path.is_file():
             raise RuntimeError("Preview worker finished without a result. The server is still running.")
+        if progress:
+            progress(dict(label='Preview files ready', fraction=.99))
         return json.loads(result_path.read_text())
 
 
@@ -75,8 +102,11 @@ def settings(payload):
     if not isinstance(payload, dict):
         raise ValueError("Expected settings object")
     if 'recipe' in payload:
-        return dict(seed=integer(payload.get('seed',42),0,2**31-1,'Augmentation seed'),
+        result=dict(seed=integer(payload.get('seed',42),0,2**31-1,'Augmentation seed'),
                     recipe=recipes.validate(payload['recipe']))
+        if 'preview_values' in payload:
+            result['preview_values']=recipes.validate_preview_values(result['recipe'],payload['preview_values'])
+        return result
     value = {**DEFAULTS, **payload}
     if value["profile"] not in ("clean", "light-copy", "library-scan"):
         raise ValueError("Unknown scan profile")
@@ -133,9 +163,16 @@ def rotate_antialiased(image, angle):
                            (rotated.height + scale - 1) // scale), Image.Resampling.LANCZOS)
 
 
-def augment(image, config):
+def augment(image, config, on_step=None):
     if 'recipe' in config:
-        return recipes.apply(image,config['recipe'],config['seed'],rotate_antialiased)
+        return recipes.apply(image,config['recipe'],config['seed'],rotate_antialiased,on_step=on_step,
+                             preview_values=config.get('preview_values'))
+    if config['profile'] == 'clean' and not config['ink']:
+        output = rotate_antialiased(image, config['rotation'])
+        effects = [] if not config['rotation'] else [dict(name='AntialiasedRotation', backend='Pillow', parameters=dict(
+            angle_degrees=config['rotation'], supersampling=2, upsample='bicubic', rotation_resampling='bicubic',
+            downsample='lanczos', expand=True, fill='white'))]
+        return output, effects
     from augraphy import InkBleed
     from experiments.scan_degradation.generate import PROFILES, LIBRARY_SCAN, bad_photocopy, library_scan, _seeded
     array = np.array(image.convert("L"))
@@ -172,7 +209,54 @@ def augment(image, config):
     return output, effects
 
 
-def preview(data, payload, documents):
+def source_fingerprint(payload):
+    """Conservative source reuse key; no augmentation inputs or training data."""
+    files = ['datasets/one_note_data.py', 'datasets/short_staff_data.py',
+             'datasets/clean_page_data.py', 'datasets/pilot_data.py',
+             'representation/codec_fixtures.py', 'representation/score_codec.py',
+             'representation/score_semantics.py', 'generation/font_resources.py']
+    value = dict(stage=str(payload.get('stage', '0')), example=payload.get('example'),
+                 seed=payload.get('music_seed', 7), font=payload.get('font', 'Leipzig'),
+                 implementation=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
+                 versions={name: version(name) for name in ['verovio', 'CairoSVG', 'Pillow', 'fonttools', 'matplotlib']},
+                 code={name: hashlib.sha256((ROOT/'experiments/full_page_omr'/name).read_bytes()).hexdigest()
+                       for name in files})
+    return hashlib.sha256(json.dumps(value, sort_keys=True).encode()).hexdigest()
+
+
+def reuse_source(data, preview_id, fingerprint):
+    """Reuse only intact synthetic artifacts with matching source inputs/code."""
+    if not preview_id:
+        return None
+    try:
+        manifest = json.loads(artifact(data, preview_id, 'manifest.json').read_text())
+        if manifest.get('source_fingerprint') != fingerprint or manifest['source']['kind'] != 'synthetic':
+            return None
+        png = artifact(data, preview_id, 'source.png').read_bytes()
+        xml = artifact(data, preview_id, 'source.musicxml').read_bytes()
+        if any(hashlib.sha256(content).hexdigest() != manifest['files'][name]
+               for name, content in [('source.png', png), ('source.musicxml', xml)]):
+            return None
+        with Image.open(io.BytesIO(png)) as image:
+            return image.convert('RGB'), manifest['source'], xml.decode()
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+
+
+def preview(data, payload, documents, *, progress=None, source_preview=None):
+    started = time.perf_counter()
+    timings, effect_timings = {}, []
+
+    def report(label, fraction):
+        if progress:
+            progress(dict(label=label, fraction=fraction))
+
+    def on_step(index, total, label, elapsed):
+        if elapsed is None:
+            report(f'Effect {index+1}/{total}: {label}', .3 + .55*index/total)
+        else:
+            effect_timings.append(dict(position=index, label=label, seconds=round(elapsed, 4)))
+
     if not isinstance(payload, dict):
         raise ValueError("Expected a preview object")
     config = settings(payload.get("settings", {}))
@@ -180,6 +264,10 @@ def preview(data, payload, documents):
     if stage not in {s["id"] for s in STAGES}:
         raise ValueError("Unknown stage")
     with LOCK, tempfile.TemporaryDirectory(prefix="musvit-curriculum-") as temp:
+        source_started = time.perf_counter()
+        source_reused = False
+        fingerprint = None
+        report('Loading source scan' if stage == '4' else 'Preparing source engraving', .08)
         if stage == "4":
             doc = next((d for d in documents if d["id"] == payload.get("document_id")), None)
             if doc is None:
@@ -196,8 +284,22 @@ def preview(data, payload, documents):
             example = payload.get("example", STAGES[int(stage)]["examples"][0])
             if example not in STAGES[int(stage)]["examples"]:
                 raise ValueError("Example does not belong to this stage")
-            image, provenance, source = synthetic(example, payload.get("music_seed", 7), payload.get("font", "Leipzig"), Path(temp) / "render")
-        result, effects = augment(image, config)
+            fingerprint = source_fingerprint(payload)
+            cached = reuse_source(data, source_preview, fingerprint)
+            if cached:
+                image, provenance, source = cached
+                source_reused = True
+                report('Reusing unchanged source engraving', .28)
+            else:
+                report('Generating and rendering source engraving', .12)
+                image, provenance, source = synthetic(example, payload.get("music_seed", 7), payload.get("font", "Leipzig"), Path(temp) / "render")
+        timings['source'] = round(time.perf_counter()-source_started, 4)
+        report('Preparing scan effects (loading Augraphy if needed)', .3)
+        effects_started = time.perf_counter()
+        result, effects = augment(image, config, on_step=on_step)
+        timings['augmentation'] = round(time.perf_counter()-effects_started, 4)
+        report('Saving preview images and model inputs', .87)
+        save_started = time.perf_counter()
         preview_id = uuid.uuid4().hex
         folder = data / "curriculum" / preview_id
         folder.mkdir(parents=True, exist_ok=False)
@@ -213,9 +315,14 @@ def preview(data, payload, documents):
         if source:
             (folder / "source.musicxml").write_text(source)
             files["source.musicxml"] = hashlib.sha256(source.encode()).hexdigest()
+        timings['save_images_and_hashes'] = round(time.perf_counter()-save_started, 4)
+        timings['worker_total'] = round(time.perf_counter()-started, 4)
+        report('Writing manifest', .97)
         manifest = dict(schema_version=1, id=preview_id, stage=stage, created_at=datetime.now(timezone.utc).isoformat(),
                         status="exploration only; not approved training data", source=provenance, settings=config,
                         request=payload, effects=effects, augraphy_version=version("augraphy"),
+                        timings_seconds=timings, effect_timings_seconds=effect_timings,
+                        source_fingerprint=fingerprint, source_reused=source_reused,
                         pillow_version=version("Pillow"), numpy_version=version("numpy"),
                         preview_implementation_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
                         recipe_implementation_sha256=hashlib.sha256(Path(recipes.__file__).read_bytes()).hexdigest(),
@@ -225,6 +332,7 @@ def preview(data, payload, documents):
                         preprocessing="RGB, square 1024x1024 bilinear resize; matches current pilot (may distort aspect ratio)",
                         files=files)
         (folder / "manifest.json").write_text(json.dumps(manifest, indent=2))
+        report('Preview files ready', .99)
         return manifest
 
 
@@ -247,9 +355,49 @@ def export_preview(data, preview_id):
     return buffer.getvalue()
 
 
+def write_atomic(path, value):
+    staging = path.with_suffix('.tmp')
+    staging.write_text(json.dumps(value))
+    staging.replace(path)
+
+
+def run_persistent_worker(root):
+    """All imports, toolkit construction and rendering stay on this main thread."""
+    write_atomic(root/'startup.progress.json', dict(label='Loading engraving dependencies', fraction=.02))
+    import verovio  # noqa: F401
+    import cairosvg  # noqa: F401
+    from experiments.full_page_omr.datasets import one_note_data, short_staff_data  # noqa: F401
+    write_atomic(root/'startup.progress.json', dict(label='Loading Augraphy (once per session)', fraction=.02))
+    import augraphy  # noqa: F401
+    write_atomic(root/'ready.json', dict(pid=os.getpid()))
+    for line in sys.stdin:
+        request = json.loads(line)
+        identity = request['id']
+        if len(identity) != 32 or any(c not in '0123456789abcdef' for c in identity):
+            raise ValueError('Invalid internal preview job ID')
+        progress_path = root/f'{identity}.progress.json'
+        try:
+            manifest = preview(Path(request['data']), request['payload'], request['documents'],
+                progress=lambda value: write_atomic(progress_path, value),
+                source_preview=request.get('source_preview'))
+            result = dict(ok=True, manifest=manifest)
+        except Exception as error:
+            result = dict(ok=False, type=type(error).__name__, error=str(error))
+        write_atomic(root/f'{identity}.result.json', result)
+
+
 if __name__ == "__main__":
+    if len(sys.argv) == 3 and sys.argv[1] == '--persistent-worker':
+        run_persistent_worker(Path(sys.argv[2]))
+        raise SystemExit(0)
     if len(sys.argv) != 4 or sys.argv[1] != "--worker":
         raise SystemExit("This module is launched by the Bar Review preview endpoint.")
     request = json.load(sys.stdin)
-    result = preview(Path(sys.argv[2]), request["payload"], request["documents"])
+    progress_path = Path(sys.argv[3]).with_suffix('.progress.json')
+
+    def write_progress(value):
+        write_atomic(progress_path, value)
+
+    result = preview(Path(sys.argv[2]), request["payload"], request["documents"],
+                     progress=write_progress, source_preview=request.get('source_preview'))
     Path(sys.argv[3]).write_text(json.dumps(result))

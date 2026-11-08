@@ -37,6 +37,9 @@ dependencies = [
 [project.scripts]
 musvit = "musvit.cli:main"
 
+[project.optional-dependencies]
+desktop = ["blenderui==0.4.1"]
+
 [dependency-groups]
 notebooks = [
     "ipykernel>=6.0",

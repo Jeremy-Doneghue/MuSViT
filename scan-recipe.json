@@ -1,0 +1,51 @@
+{
+  "schema_version": 2,
+  "seed": 54,
+  "recipe": [
+    {
+      "id": "82a2bf233c1f49629fed2a0a1abcddcc",
+      "type": "subtle_noise",
+      "enabled": true,
+      "parameters": {
+        "amount": 37
+      },
+      "ranges": {
+        "amount": [
+          10,
+          50
+        ]
+      }
+    },
+    {
+      "id": "f33b09b6a6b142628bcd4dbcb72da526",
+      "type": "black_white",
+      "enabled": true,
+      "parameters": {
+        "method": "fixed",
+        "threshold": 110,
+        "radius": 15,
+        "offset": 10
+      },
+      "ranges": {
+        "threshold": [
+          110,
+          220
+        ]
+      }
+    },
+    {
+      "id": "8a6d2601b9d64d7d8d662c70737367d5",
+      "type": "rotation",
+      "enabled": true,
+      "parameters": {
+        "angle": -1.0
+      },
+      "ranges": {
+        "angle": [
+          -1.5,
+          1.5
+        ]
+      }
+    }
+  ]
+}

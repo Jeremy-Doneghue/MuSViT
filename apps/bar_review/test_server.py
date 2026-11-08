@@ -6,6 +6,8 @@ from pathlib import Path
 import tempfile
 import unittest
 import zipfile
+from email.message import Message
+from unittest.mock import Mock, patch
 
 from PIL import Image, ImageDraw
 
@@ -30,6 +32,69 @@ def page_image():
     # A note stem should not become a bar boundary.
     draw.line((310, 92, 310, 116), fill="black", width=2)
     return image
+
+
+class ForwardedHostTests(unittest.TestCase):
+    def handler(self, hosts, origin=None):
+        handler = object.__new__(server.Handler)
+        handler.headers = Message()
+        for host in hosts:
+            handler.headers['Host'] = host
+        if origin is not None:
+            handler.headers['Origin'] = origin
+        handler.server = Mock(server_port=8765)
+        handler.json = Mock()
+        return handler
+
+    def test_loopback_hosts_accept_forwarded_ports(self):
+        for host in ['localhost:9000', '127.0.0.1:12345', '[::1]:9000',
+                     'localhost', '127.0.0.1', '[::1]', 'LOCALHOST:8765']:
+            with self.subTest(host=host):
+                self.assertTrue(self.handler([host]).local_host())
+
+    def test_nonlocal_malformed_and_duplicate_hosts_rejected(self):
+        for hosts in [[], ['example.com:9000'], ['192.168.1.2:8765'],
+                      ['localhost.evil:9000'], ['localhost:0'], ['localhost:65536'],
+                      ['localhost:abc'], ['localhost:'], ['localhost/path'],
+                      ['evil@localhost:9000'], [' localhost:9000'],
+                      ['localhost:9000', 'localhost:9000']]:
+            with self.subTest(hosts=hosts):
+                handler = self.handler(hosts)
+                self.assertFalse(handler.local_host())
+                self.assertEqual(handler.json.call_args.args[1], 403)
+
+    def test_forwarded_posts_require_matching_browser_origin(self):
+        for origin, allowed in [('http://localhost:9000', True),
+                                ('http://localhost:8765', False),
+                                ('http://example.com:9000', False)]:
+            with self.subTest(origin=origin):
+                handler = self.handler(['localhost:9000'], origin)
+                body = json.dumps({'document_id':'doc', 'region_id':'region'}).encode()
+                handler.headers['Content-Length'] = str(len(body))
+                handler.rfile = io.BytesIO(body)
+                handler.path = '/api/region'
+                with patch.object(server, 'update_region', return_value={'saved':True}) as update:
+                    handler.do_POST()
+                    self.assertEqual(update.called, allowed)
+                    if not allowed:
+                        self.assertEqual(handler.json.call_args.args[1],403)
+
+    def test_renderer_abort_returns_json_and_next_preview_can_succeed(self):
+        for failure in [True, False]:
+            handler = self.handler(['localhost:9000'], 'http://localhost:9000')
+            handler.path = '/api/curriculum/preview'
+            handler.headers['Content-Length'] = '2'
+            handler.rfile = io.BytesIO(b'{}')
+            with patch.object(server, 'get_documents', return_value=[]), patch.object(
+                server.curriculum, 'preview_isolated',
+                side_effect=RuntimeError('Preview renderer failed (exit -6)') if failure else None,
+                return_value={'id':'successful-preview'}):
+                handler.do_POST()
+            if failure:
+                self.assertEqual(handler.json.call_args.args[1],400)
+                self.assertIn('exit -6',handler.json.call_args.args[0]['error'])
+            else:
+                handler.json.assert_called_once_with({'id':'successful-preview'})
 
 
 class ReviewTests(unittest.TestCase):

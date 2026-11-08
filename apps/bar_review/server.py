@@ -11,6 +11,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 import io
 import json
 from pathlib import Path
+import re
 import shutil
 import sqlite3
 import subprocess
@@ -23,6 +24,7 @@ import zipfile
 
 from PIL import Image, ImageOps
 from segmentation import detect_regions
+import curriculum
 
 
 APP = Path(__file__).resolve().parent
@@ -244,9 +246,13 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_bytes(json.dumps(data).encode(), status=status)
 
     def local_host(self):
-        port = self.server.server_port
-        if self.headers.get("Host") not in {f"127.0.0.1:{port}", f"localhost:{port}"}:
-            self.json({"error": "Use the local loopback URL"}, 403)
+        # SSH forwards preserve the browser's Host, including its local port,
+        # which need not match the port this server listens on.
+        hosts = self.headers.get_all("Host", [])
+        match = re.fullmatch(r"(?:localhost|127\.0\.0\.1|\[::1\])(?::([0-9]{1,5}))?",
+                             hosts[0], re.IGNORECASE) if len(hosts) == 1 else None
+        if not match or (match[1] is not None and not 1 <= int(match[1]) <= 65535):
+            self.json({"error": "Use http://localhost:<forwarded-port> or http://127.0.0.1:<forwarded-port>"}, 403)
             return False
         return True
 
@@ -255,7 +261,15 @@ class Handler(SimpleHTTPRequestHandler):
             return
         path = urlsplit(self.path).path
         try:
-            if path == "/api/settings":
+            if path == "/api/curriculum":
+                self.json(curriculum.catalog())
+            elif path.startswith("/api/curriculum/export/"):
+                self.send_bytes(curriculum.export_preview(DATA, path.rsplit("/", 1)[-1]), "application/zip", filename="curriculum-preview.zip")
+            elif path.startswith("/curriculum-artifacts/"):
+                _, _, preview_id, filename = path.split("/")
+                file = curriculum.artifact(DATA, preview_id, filename)
+                self.send_bytes(file.read_bytes(), self.guess_type(str(file)))
+            elif path == "/api/settings":
                 self.json({"scan_dir": SCAN_DIR})
             elif path == "/api/documents":
                 self.json(get_documents())
@@ -300,7 +314,9 @@ class Handler(SimpleHTTPRequestHandler):
                 raise ValueError("Request too large or empty")
             payload = json.loads(self.rfile.read(length))
             with LOCK:
-                if self.path == "/api/import":
+                if self.path == "/api/curriculum/preview":
+                    result = curriculum.preview_isolated(DATA, payload, get_documents())
+                elif self.path == "/api/import":
                     result = import_scan(payload["path"], int(payload.get("start_page", 1)), int(payload.get("pages", 1)))
                 elif self.path == "/api/region":
                     result = update_region(payload["document_id"], payload["region_id"], payload)
@@ -308,7 +324,7 @@ class Handler(SimpleHTTPRequestHandler):
                     self.send_error(404)
                     return
             self.json(result)
-        except (ValueError, KeyError, OSError, ET.ParseError, subprocess.SubprocessError) as error:
+        except (ValueError, KeyError, TypeError, RuntimeError, ImportError, OSError, ET.ParseError, subprocess.SubprocessError) as error:
             self.json({"error": str(error)}, 400)
 
 

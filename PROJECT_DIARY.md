@@ -49,6 +49,49 @@ or handwriting recognition.
 
 ## Current state
 
+**2026-11-08 application update:** added a local Curriculum Lab to
+[Bar Review](apps/bar_review/README.md#curriculum-lab), reachable at
+`/curriculum.html`. Five proposed stages, eight synthetic example types, imported
+scan pages, real Augraphy controls, seeded previews, native/1024 comparison,
+zoom/detail crops and immutable recipe/image ZIP exports are implemented. Uses
+existing generators and accepted profile foundations; modified effects still need
+legibility/calibration review. Preview artifacts are separate from reviewed pairs
+and training data. App tests and HTTP smoke checks passed; browser interaction
+QA remains unexecuted. SSH forwarding now accepts a different client-side
+loopback port while retaining same-origin POST checks; restart the server to
+load this fix. Preview rendering now uses a fresh subprocess per request after a
+reported Verovio font-load/native abort; worker failures return JSON without
+terminating the server. Nineteen app tests and four repeated cross-font worker
+previews passed. Lab rotation now uses 2× supersampled bicubic/Lanczos sampling
+instead of Augraphy's nearest-neighbour path. The lab now supports ordered
+recipes: add/reorder/disable/remove scanner edge, PageBorder, framing,
+BindingsAndFasteners, BadPhotoCopy, InkBleed and antialiased rotation, with per-step
+controls and stable seeds. Scan resolution is now an additional ordered step:
+explicit assumed canvas width and target DPI, reduced-pixel or restored-size
+output, and source-resolution limits recorded. Black & white scan is also an
+ordered effect with fixed/Otsu/adaptive thresholds and true 1-bit native PNG
+export when last active; final model preprocessing remains RGB. Added DirtyDrum,
+DirtyRollers, DirtyScreen, LinesDegradation, LowInkPeriodicLines,
+LowInkRandomLines, Markup and SubtleNoise with per-effect controls. All 28 app tests pass; an isolated composite preview
+was generated and visually inspected. Restart the server and reload the page to
+load the new catalog/UI. Next action for the app: open the lab, compare representative
+notation and real development scans, and select reviewed profiles for the first
+curriculum export. Full-model preset/training work remains pending separately.
+
+**2026-11-08 current direction:** user selected moving toward the full-size
+paper-based OMR model and designing the curriculum/dataset for real sheet-music
+scans, especially Augraphy appearance variation. See the new
+[curriculum and dataset design](experiments/full_page_omr/docs/CURRICULUM_DATASET.md).
+This supersedes the earlier priority of further one-note diagnostics. The move is
+an engineering decision, not an isolated measured capacity benefit: replicated
+placement diversity is the strongest recent finding. Proposed model is the
+existing Base encoder plus upstream eight-layer/256-width decoder defaults;
+feed-forward width and dropout also differ from our pilot factory. No model code
+or training changed yet. Next action: explicit full-model preset and bounded
+integration check, alongside a grouped real-scan calibration inventory and
+reviewed augmentation contact sheets at actual model resolution. Sampling mixes,
+counts and progression gates in the design remain proposals.
+
 Latest completed run: seed-19 [placement replication](experiments/full_page_omr/docs/PLACEMENT_COMPARISON.md),
 `outputs/placement_seed19_mps_20261108_01`. Same data/features/medium model/lr
 .0001/bounds, new initialization and shuffle seed. Selected control 13/56
@@ -156,6 +199,10 @@ Other retained capabilities and limits:
 | Bar Review | Reviewed crops and MusicXML export | OMR predictions, assembled full-part export and fidelity review |
 
 ## Proposed next investigations
+
+The active design is [curriculum and dataset](experiments/full_page_omr/docs/CURRICULUM_DATASET.md).
+The dated proposals below are retained history, superseded where they conflict
+with the current direction above; they are not a queue of pending runs.
 
 **2026-11-08 budget steering:** user prefers exploring a medium local pilot over
 an expensive full reproduction. Proposed four layers/width 256 versus two/128,
@@ -886,3 +933,193 @@ full metrics and transient troubleshooting in subsystem reports rather than repe
   No inference rerun; MPS cache checks passed. Dedicated test and CLI checks passed.
   No further experiment launched. Next proposed action: inspect remaining error
   patterns and specify bounded generalization diagnostic. Whitespace checked.
+
+- **2026-11-08 — Full-model curriculum and scan-data direction:** user selected
+  moving toward the paper-based full model and curriculum/dataset design. Reviewed
+  latest recorded experiment results, local model factory/configuration, codec and
+  generation contracts, and accepted Augraphy profiles. Rechecked paper A.9.1 and
+  upstream decoder source online. Recorded that placement diversity improved both
+  seeds, whereas capacity at the improved learning rate has not been isolated.
+  Added [design](experiments/full_page_omr/docs/CURRICULUM_DATASET.md): explicit
+  eight-layer model settings, separate musical/appearance progression, grouped
+  sources and real-scan evaluation, provisional sampling/counts/gates, calibrated
+  degradation families, legibility after resizing, ambiguity and geometry rules,
+  and feature-cache implications. Updated directory guide and active direction;
+  older proposals/results preserved as history. Documentation-only work: no new
+  model configuration, dataset, training, image review or annotation executed.
+  Checked local links in new design and documentation diff whitespace. Remaining
+  limits: scan distribution/calibration and full-model resource costs unmeasured;
+  curriculum efficacy and augmented real-scan recognition untested. Exact next
+  action: implement explicit full-model preset and bounded integration check;
+  assemble grouped scan calibration inventory and candidate augmentation contact
+  sheets before freezing the first short-passage export and run budget.
+
+- **2026-11-08 — Curriculum Lab implemented in Bar Review:** user requested a
+  visual curriculum/augmentation explorer building on the local app. Added
+  `curriculum.py`, lab HTML/CSS/JS, sidebar navigation and local API/artifact/ZIP
+  routes. Reuses one-note, short-passage, complete-page and voice/percussion
+  generators; exposes five proposed stages, eight synthetic example types,
+  imported scan pages, three fonts, music/augmentation seeds, light-copy/library
+  profiles, copy strength, rotation and Augraphy InkBleed. Preserves original
+  annotation behavior, source scans and existing exports. Preview folders are
+  unique and manifests explicitly unapproved/unassigned; serialization protects
+  Augraphy global RNG/JIT state. Viewer has native/1024 input comparison, zoom,
+  keyboard/click detail navigation, stale-settings indication and exact-preview
+  download. No model, training or dataset split changed.
+  Checks: all 14 app tests passed (9 existing plus 5 preview tests); all eight
+  synthetic types rendered with combined library/rotation/ink effects. HTTP
+  checks on a temporary loopback server passed for pages, catalog, document list,
+  Petaluma passage preview, every artifact, ZIP and invalid-stage rejection.
+  Inspected the generated 1024 augmented image; browser layout/interaction QA was
+  unavailable and is not claimed. JS syntax and diff whitespace checked. Existing
+  editor dependencies installed with pnpm because npm was unavailable; no package
+  manifest/lockfile changes. Temporary installer scratch moved outside checkout.
+  Local HTTP test artifacts: `/private/tmp/musvit-curriculum-http-20261108/`;
+  test server stopped after checks. Runtime previews use the selected Bar Review
+  data directory's `curriculum/` subdirectory. Limits: focused stage-3 coverage,
+  no spatial mapping or automatic legibility judgment, real-page labels not
+  inferred, and previews are not calibrated training pairs. Exact next action:
+  visually exercise the lab with representative synthetic notation and imported
+  development scans, then freeze reviewed augmentation recipes for the planned
+  short-passage curriculum dataset.
+
+- **2026-11-08 — SSH forwarding host validation fixed:** user encountered
+  "Use the local loopback URL" through an SSH tunnel. Code inspection found
+  the Host check required the browser port to equal the server listening port.
+  Changed validation to accept localhost, 127.0.0.1 and [::1] with any valid
+  client-side port (or default port), rejecting nonlocal, malformed and duplicate
+  Host headers. Kept loopback binding and exact browser-origin POST checks.
+  Added three regression tests covering forwarded hosts, invalid hosts and
+  forwarded POST origin matching; all 17 app tests passed. Documented SSH
+  forwarding and server restart. Diff whitespace checked. No live SSH tunnel
+  was exercised; next action is to restart Bar Review and reopen it through
+  the user's local forwarded port.
+
+- **2026-11-08 — Native preview crash isolated:** user reported a browser fetch
+  NetworkError and supplied terminal output: first preview and images returned
+  200, then Verovio failed font/glyph initialization and aborted Python with
+  uncaught C++ `std::out_of_range`. This establishes a renderer/server abort,
+  not an SSH Host rejection. Installed Verovio initialization sets a default
+  resource path on import; repeated HTTP request threads were sharing native
+  renderer state. Exact internal native failure was not independently isolated.
+  Changed the preview endpoint to launch a fresh Python process/main thread for
+  each preview, inheriting the rendering environment; capture exit diagnostics,
+  return JSON for failures and enforce a 120-second timeout. This also contains
+  native aborts that Python exception handlers cannot catch. Added a useful
+  connection-loss message in the frontend and documented worker behavior.
+  Checks: all 19 app tests passed, including simulated native worker failure,
+  timeout and a successful request following failure; four actual sequential
+  isolated previews from distinct parent threads passed for Leipzig, Bravura,
+  Petaluma, then Leipzig. Those integration previews used temporary directories.
+  JS syntax and diff whitespace passed. No live SSH/browser retest performed.
+  Existing scans, annotations and exports preserved. Exact next action: restart
+  the server with the rendering activation environment, reload the browser, and
+  retry consecutive previews through the user's tunnel.
+
+- **2026-11-08 — Antialiased lab rotation:** user observed visible stair steps
+  in rotated previews and clarified that the affected component is Augraphy,
+  not Verovio. Inspected installed Augraphy 8.2.6: Geometric calls a Pillow
+  rotate helper without a resampling argument (nearest neighbour). Replaced
+  the lab's final rotation with Pillow bicubic at 2× resolution and Lanczos
+  downsampling; preserve the expanded canvas, use white fill, and bypass all
+  filtering at zero degrees. Other Augraphy effects and historical standalone
+  scan recipes remain unchanged. Recipe manifests record the new backend,
+  angle, filters and supersampling. Rotation-only previews now preserve RGB.
+  All 20 app tests passed, including grey edge coverage, expanded dimensions,
+  white fill, exact zero-angle pixels and ink conservation within 5% across
+  ±1/±3-degree synthetic staff-line checks. Generated and visually inspected
+  a 4× magnified before/after line comparison at
+  `/private/tmp/musvit-rotation-antialiasing.png`; new edges are smoothly graded.
+  Diff whitespace checked. No training run or real-scan calibration performed.
+  Next action: generate a fresh rotated lab preview and inspect fine notation
+  at native and model-input resolutions; old immutable previews are unchanged.
+
+- **2026-11-08 — Ordered Augraphy recipe builder:** user requested composable
+  effects with explicit application order, including border/framing,
+  BindingsAndFasteners and BadPhotoCopy. Added validated `recipes.py` catalog and
+  sequential executor, seven effect types, four starter recipes and per-step UI
+  controls. Steps can be repeated, moved with accessible up/down buttons,
+  disabled or removed; max 12 steps and bounded canvas growth. Added local
+  punch/binding holes, clips and triangle clips with no external foreground or
+  Figshare downloads. Rotation remains antialiased and now accepts fractional
+  degrees. Stable effect IDs derive independent seeds from the recipe seed so
+  reordering preserves each step's random stream, subject to upstream image and
+  dimension changes. Exports retain requested/disabled steps, applied order,
+  exact backend parameters/seeds/dimensions and recipe implementation hash.
+  Legacy profile requests and existing artifacts remain supported/preserved.
+  Checks: all 23 app tests passed, including replay, changed-order pixel
+  difference, stable seeds, bypass equivalence, validation, four binding styles,
+  and exported manifest order. Individually smoke-tested all seven effects.
+  Isolated synthetic composite worker preview succeeded and its 1024 image was
+  visually inspected at `/private/tmp/musvit-ordered-recipe-20261108/curriculum/d5ddd0aed2644698a525f2f66df32ca5/`.
+  JS syntax and diff whitespace passed. Browser interaction QA remains unexecuted;
+  composite profiles are experimental, not calibrated scan distributions. No
+  training or existing dataset changed. Exact next action: restart Bar Review,
+  reload the lab, load the border/framing/bindings/copy starter and compare orders
+  on representative notation before selecting a dataset recipe.
+
+- **2026-11-08 — Lower-DPI scan simulation:** user requested lower scan DPI.
+  Added an ordered Scan resolution effect with target DPI (36–600), assumed
+  current canvas width in mm, and reduced-pixel versus restored-size output.
+  Uses Pillow BOX pixel-area averaging for sampling loss and optional bilinear
+  enlargement. Does not invent source resolution: targets above available
+  pixels bypass resizing and flag the limit in manifest/UI. DPI is explicitly
+  conditional on the physical-width assumption, including prior framing; current
+  1400px synthetic pages are approximately 169 DPI at 210mm width. Manifests
+  record effective input/scan DPI, requested DPI, sampled dimensions and filters;
+  geometry changes are marked for native-size reduction. Final model resizing
+  remains separate. Existing previews/datasets unchanged.
+  Checks: all 25 app tests passed, including expected dimensions, measurable
+  fine-line detail loss, restored-size mode, exact equal/higher-resolution bypass
+  and input validation. Isolated full-page horn preview at 75 DPI produced
+  620x877 from 1400x1981 and was visually inspected. Artifact:
+  `/private/tmp/musvit-scan-dpi-20261108/curriculum/78b2b43c49a8483dbc687edd3cb2f832/`.
+  JS syntax and diff whitespace passed; browser QA not executed. Sampling only,
+  not calibrated scanner optics/thresholding/compression. Next action: restart
+  server, reload lab, add Scan resolution and compare 75/100/150 DPI on notation
+  and real development scans at native and 1024 input sizes.
+
+- **2026-11-08 — Bilevel scan simulation:** user explicitly requested actual
+  black/white scan appearance rather than grayscale, extending the prior scope.
+  Added ordered Black & white scan effect with fixed threshold, Otsu automatic
+  global threshold and Gaussian adaptive threshold; adaptive window radius and
+  offset are configurable. No dithering; output pixels are only 0/255 at that
+  step. Save native augmented PNG as true 1-bit when this is the last active
+  effect. Later effects may reintroduce grey, and the separate final RGB 1024
+  bilinear model preprocessing intentionally remains unchanged. Recorded native
+  PNG mode and effective threshold/backend settings in the manifest; documented
+  placing thresholding after DPI/rotation for final bilevel capture.
+  Initial test used only a smooth gradient and incorrectly expected adaptive
+  thresholding to retain black pixels; corrected the fixture to include a local
+  ink mark (an all-white adaptive result on that gradient was valid).
+  Checks: all 27 app tests passed, including pure binary output in all three
+  modes, fixed threshold boundary/ink coverage, actual mode-1 PNG export,
+  expected grey edge pixels after model resizing, and RGB output after a later
+  rotation. Diff whitespace checked. Browser QA and real-scanner calibration
+  remain unexecuted; no existing exports or training changed. Exact next action:
+  restart server, reload lab, append Black & white scan after DPI reduction and
+  compare threshold settings on faint staff lines, dots and noteheads.
+
+- **2026-11-08 — Eight additional Augraphy effects:** user requested DirtyDrum,
+  DirtyRollers, DirtyScreen, LinesDegradation, LowInkPeriodicLines,
+  LowInkRandomLines, Markup and SubtleNoise. Added all eight to the ordered
+  recipe catalog/executor, exposing bounded controls for each effect and exact
+  constructor parameters in manifests. Existing generic UI picks up the new
+  catalog; all steps support order, bypass and stable seeds. Markup uses
+  monochrome ink and detected content, so requested line counts are not
+  guaranteed and marks are not added to musical labels. Initial smoke testing
+  found DirtyRollers' import-time Numba dispatcher still compiled despite
+  numba_jit=0, causing an AttributeError. The lab now calls the original Python
+  mask function on that effect instance, avoiding global patches and preserving
+  RNG/JIT restoration; this execution mode is recorded in manifests.
+  Checks: all 28 app tests passed, including per-effect deterministic replay,
+  unchanged source/dimensions, actual changed pixels on a staff fixture, and
+  Python/NumPy/JIT state restoration. Eight isolated full-page horn previews
+  also completed; visually inspected their contact sheet at
+  `/private/tmp/musvit-added-effects-20261108/contact-sheet.png`.
+  Artifacts reside beneath that directory's `curriculum/` tree. JS syntax and
+  diff whitespace passed. Browser interaction QA and scan calibration remain
+  unexecuted; effects are exploratory, not newly approved training recipes.
+  No existing dataset/annotation/training changed. Exact next action: restart
+  Bar Review, reload the lab, and tune the added steps on representative music
+  while checking that distinguishing notation remains readable.

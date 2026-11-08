@@ -22,15 +22,14 @@ remains available in the [original MuSViT repository](https://github.com/OMR-PRA
 
 ## Current experiment path
 
-The latest completed experiment is the [paired score-versus-compact-pitch comparison](docs/PITCH_TARGETS.md):
-all 14 pitches taught, 56/56 training/new-placement images, identical initial
-decoder/vocabulary and shared frozen features. Selected score version: 35/56
-training and 18/56 new placements correct. Compact version: constant B5, 4/56 each;
-final compact predictions malformed. Both gates failed. This finite appearance
-diagnostic deliberately shares labels and does not claim composition-family isolation.
-A bounded direct pitch choice without sequence generation is the next proposed
-diagnostic; training-stability comparisons remain separate. Earlier one-note and
-short-staff results remain in their reports. No experiment is running or queued.
+Current direction is the [full-model curriculum and dataset design](docs/CURRICULUM_DATASET.md),
+with calibrated Augraphy variation and real-scan evaluation. The latest completed
+[placement replication](docs/PLACEMENT_COMPARISON.md) reached 48/56 selected
+validation exact for expanded placement training in both seeds; the controls
+reached 25/56 and 13/56. This is a finite one-note appearance diagnostic, not
+full-page or real-scan recognition. The full decoder preset and new curriculum
+are not implemented yet; no experiment is running or queued. Consult the project
+diary for the authoritative current state and historical reports for earlier runs.
 
 ```text
 representation/codec_fixtures + datasets/clean_page_data

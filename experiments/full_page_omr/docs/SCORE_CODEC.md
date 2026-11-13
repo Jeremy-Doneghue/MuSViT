@@ -5,6 +5,12 @@ into deterministic integer tokens and back into editable MusicXML. This is the
 implemented first prototype approved after the [format analysis](TARGET_FORMAT_ANALYSIS.md).
 It is independent of the old bekern loader and does not change the trainer.
 
+The [normalization policy](NORMALIZATION_POLICY.md) records the 2026-11-13
+MusicXML direction, proposed canonicalization/omission rules, and an executed
+15-pair audit of this implementation. Six normalization gaps remain; those rules
+are not yet implemented here. Existing early datasets/checkpoints are disposable;
+future implementation does not need a migration layer.
+
 ## Use
 
 ```python

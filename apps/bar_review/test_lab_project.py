@@ -37,7 +37,7 @@ class ProjectTests(unittest.TestCase):
         draw=ImageDraw.Draw(image)
         for y in range(60,130,12):
             draw.line((20,y,460,y),fill='black',width=2)
-        return image,dict(kind='synthetic'),'<score-partwise/>'
+        return image,dict(kind='synthetic'),'**kern\n4c\n*-\n'
 
     def generate_levels(self):
         def preview(data,payload,documents,**kwargs):
@@ -96,6 +96,115 @@ class ProjectTests(unittest.TestCase):
             self.assertEqual(other.payload()['settings']['preview_values'],{'rotate':{'angle':2}})
         finally:
             other.close()
+
+    def test_custom_curriculum_stage_management_uses_stable_source_types(self):
+        app = self.app
+        editor = app.curriculum_editor
+        original = deepcopy(app.stages)
+        app.stage_fields['title'].value = 'My first lesson'
+        app.stage_fields['focus'].value = 'Ledger lines'
+        editor.duplicate()
+        identity = app.active_stage_id
+        self.assertNotEqual(identity, original[0]['id'])
+        app.stage_fields['focus'].value = 'Rhythm'
+        self.assertEqual(app.stages[0]['focus'], 'Ledger lines')
+        editor.move(1)
+        self.assertEqual(app.active_stage_id, identity)
+        self.assertEqual(app.stages[2]['id'], identity)
+        app.stage_template.value = 'Short passages'
+        self.assertEqual(app.payload()['stage'], '1')
+        self.assertEqual(app.payload()['example'], 'passage')
+        self.assertEqual(app.active_stage_id, identity)
+        self.generate_levels()
+        self.assertTrue(all(stage['latest']['request']['stage'] == '1' for stage in app.levels))
+        editor.add()
+        self.assertEqual(len(app.stages), 7)
+        self.assertEqual(editor.active()['title'], 'New stage')
+        editor.remove()
+        self.assertEqual(len(app.stages), 6)
+        editor.refresh(next(stage for stage in app.stages if stage['id'] == identity))
+        editor.reset()
+        self.assertEqual(editor.active()['focus'], curriculum.STAGES[1]['focus'])
+        self.assertEqual(app.active_stage_id, identity)
+        self.assertEqual(curriculum.STAGES, [
+            {key:value for key,value in stage.items() if key != 'template'} for stage in original])
+
+    def test_custom_curriculum_roundtrip_and_legacy_defaults(self):
+        app = self.app
+        app.curriculum_editor.add()
+        identity = app.active_stage_id
+        app.stage_fields['title'].value = 'Page reading'
+        app.stage_fields['description'].value = 'Read several systems in order.'
+        app.stage_fields['mix'].value = 'Start clean, then add scans.'
+        app.stage_template.value = 'Systems & pages'
+        app.example.value = 'Piano · full page'
+        app.curriculum_editor.move(-1)
+        expected = app.project_document()
+        path = self.root/'stages.musvitlab'
+        self.save(path)
+        other = CurriculumDesktop(self.root/'restored')
+        try:
+            other.load_project(path)
+            self.assertEqual(other.project_document(), expected)
+            self.assertEqual(other.active_stage_id, identity)
+            self.assertEqual(other.stage_choice.value, 'Page reading')
+            self.assertEqual(other.stage_fields['description'].value, 'Read several systems in order.')
+            self.assertEqual(other.stage_template.value, 'Systems & pages')
+            self.assertEqual(other.payload()['stage'], '2')
+            self.assertEqual(other.payload()['example'], 'piano_page')
+            self.assertFalse(other.recipe_panel.visible)
+            self.assertFalse(other.image_split.panes[1].visible)
+        finally:
+            other.close()
+        legacy = deepcopy(expected)
+        legacy['schema_version'] = 1
+        del legacy['curriculum_stages']
+        del legacy['active_curriculum_stage']
+        restored = lab_project.validate(legacy)
+        self.assertEqual(len(restored['curriculum_stages']), 5)
+        self.assertEqual(restored['active_curriculum_stage'], '2')
+        legacy_path = self.root/'legacy.musvitlab'
+        with zipfile.ZipFile(legacy_path, 'w') as archive:
+            archive.writestr('project.json', json.dumps(legacy))
+        app.load_project(legacy_path)
+        self.assertEqual(app.stage_choice.value, 'Systems & pages')
+        self.assertEqual(app.active_stage_id, '2')
+        self.assertEqual(app.project_document()['schema_version'], 2)
+
+    def test_curriculum_stage_validation_and_bounds(self):
+        from curriculum_plan import MAX_STAGES, validate_stages
+        app = self.app
+        editor = app.curriculum_editor
+        name = editor.active()['title']
+        app.stage_fields['title'].value = ''
+        self.assertEqual(editor.active()['title'], name)
+        app.stage_fields['title'].value = app.stages[1]['title']
+        self.assertEqual(editor.active()['title'], name)
+        malformed = deepcopy(app.stages)
+        malformed[0]['template'] = 'unknown'
+        with self.assertRaises(ValueError):
+            validate_stages(malformed)
+        malformed = deepcopy(app.stages)
+        malformed[0]['examples'] = ['invented']
+        with self.assertRaises(ValueError):
+            validate_stages(malformed)
+        document = app.project_document()
+        missing_plan = deepcopy(document)
+        del missing_plan['curriculum_stages']
+        with self.assertRaises(ValueError):
+            lab_project.validate(missing_plan)
+        document['active_curriculum_stage'] = 'missing'
+        with self.assertRaises(ValueError):
+            lab_project.validate(document)
+        while len(app.stages) > 1:
+            editor.remove()
+        editor.remove()
+        self.assertEqual(len(app.stages), 1)
+        for _ in range(MAX_STAGES+1):
+            editor.add()
+        self.assertEqual(len(app.stages), MAX_STAGES)
+        self.assertEqual(len({stage['id'] for stage in app.stages}), MAX_STAGES)
+        self.assertEqual(validate_stages(app.stages), app.stages)
 
     def test_levels_are_independent_switching_preserves_each_recipe_and_duplicate(self):
         app=self.app
@@ -196,6 +305,88 @@ class ProjectTests(unittest.TestCase):
         self.assertEqual(next(level for level in app.levels if level['id']==original)['latest']['id'],result['id'])
         app.select_level('Mild')
         self.assertEqual(app.latest['id'],result['id'])
+
+    def test_save_shortcuts_use_current_path_and_save_as_changes_it(self):
+        app = self.app
+        first, second = self.root/'first.musvitlab', self.root/'second.musvitlab'
+        with patch('desktop.FileDialog') as dialog:
+            dialog.return_value.finished = False
+            # Cocoa maps Command to modifier bit 2; Ctrl uses the same binding.
+            app.app.key('', 's', mods=2)
+            self.assertEqual(dialog.call_count, 1)
+            dialog.call_args.kwargs['on_result'](str(first))
+            original = first.read_bytes()
+            app.rename_level('Saved in place')
+            app.app.key('', 's', mods=2)
+            self.assertEqual(dialog.call_count, 1)
+            self.assertEqual(app.project_path, first.resolve())
+            with zipfile.ZipFile(first) as archive:
+                self.assertEqual(json.loads(archive.read('project.json'))['levels'][1]['name'], 'Saved in place')
+            self.assertEqual(next((self.root/'.project-backups').iterdir()).read_bytes(), original)
+
+            # Shift+Save always asks for another filename and becomes current.
+            app.app.key('', 'S', mods=3)
+            self.assertEqual(dialog.call_count, 2)
+            dialog.call_args.kwargs['on_result'](str(second))
+            self.assertEqual(app.project_path, second.resolve())
+            first_bytes = first.read_bytes()
+            app.rename_level('Second project')
+            app.app.key('', 's', mods=2)
+            self.assertEqual(first.read_bytes(), first_bytes)
+            self.assertEqual(dialog.call_count, 2)
+
+            app.app.key('', 'o', mods=2)
+            self.assertEqual(dialog.call_args.args[1], 'open')
+            dialog.call_args.kwargs['on_result'](str(first))
+            self.assertEqual(app.project_path, first.resolve())
+            app.rename_level('Loaded then saved')
+            app.app.key('', 's', mods=2)
+            self.assertEqual(dialog.call_count, 3)
+            with zipfile.ZipFile(first) as archive:
+                self.assertEqual(json.loads(archive.read('project.json'))['levels'][1]['name'], 'Loaded then saved')
+
+    def test_save_in_place_failure_preserves_project_and_current_path(self):
+        app = self.app
+        path = self.root/'current.musvitlab'
+        self.save(path)
+        app.load_project(path)
+        original = path.read_bytes()
+        app.rename_level('Unsaved change')
+        with patch('desktop_storage.os.replace', side_effect=OSError('replacement failed')):
+            app.app.key('', 's', mods=2)
+        self.assertEqual(path.read_bytes(), original)
+        self.assertEqual(app.project_path, path.resolve())
+        self.assertIn('Project save failed', app.status.text)
+        self.assertEqual(list(self.root.glob('.*.tmp')), [])
+
+    def test_file_menu_clicks_open_save_as_and_recipe_actions(self):
+        app = self.app
+        def pick(label):
+            app.app.render_raster()
+            button = app.menu_bar.buttons[0]
+            x, y = button.x+button.w//2, button.y+button.h//2
+            app.app.press(x, y); app.app.release(x, y)
+            app.app.render_raster()
+            rows = app.app.ctx.menu_rows(0)
+            _, (x, y, w, h) = next(row for row in rows if row[0] == label)
+            app.app.press(x+w//2, y+h//2); app.app.release(x+w//2, y+h//2)
+
+        with patch('desktop.FileDialog') as dialog:
+            dialog.return_value.finished = False
+            for label, kind, title in [
+                ('Open project…', 'open', 'Open Curriculum Lab project'),
+                ('Save project as…', 'save', 'Save Curriculum Lab project'),
+                ('Import recipe…', 'open', 'Open scan recipe'),
+                ('Export recipe…', 'save', 'Save scan recipe'),
+            ]:
+                pick(label)
+                self.assertEqual(dialog.call_args.args[1], kind)
+                self.assertEqual(dialog.call_args.kwargs['title'], title)
+                dialog.call_args.kwargs['on_result'](None)
+            pick('Export preview ZIP…')
+            self.assertIn('Generate a preview', app.status.text)
+            app.app.key('', 'E', mods=3)
+            self.assertIn('Generate a preview', app.status.text)
 
     def test_preview_id_collision_preserves_local_files_and_restores_new_identity(self):
         self.generate_levels()

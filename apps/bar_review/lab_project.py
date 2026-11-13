@@ -11,12 +11,14 @@ import zipfile
 
 import curriculum
 import recipes
+from curriculum_plan import default_stages, validate_stages
 
 KIND = 'musvit-curriculum-project'
+VERSION = 2
 MAX_LEVELS = 8
 MAX_BYTES = 512 * 1024 * 1024
 IMAGE_FILES = {'source.png','augmented.png','source-1024.png','augmented-1024.png'}
-FILES = IMAGE_FILES | {'source.musicxml'}
+FILES = IMAGE_FILES | {'source.krn','source.svg','source.mei','source.musicxml'}
 
 
 def level(name, recipe, seed=42):
@@ -25,13 +27,20 @@ def level(name, recipe, seed=42):
 
 
 def validate(value):
-    if not isinstance(value,dict) or value.get('kind')!=KIND or value.get('schema_version')!=1:
-        raise ValueError('Expected a version 1 Curriculum Lab project')
+    if not isinstance(value,dict) or value.get('kind')!=KIND or value.get('schema_version') not in (1, VERSION):
+        raise ValueError('Expected a version 1 or 2 Curriculum Lab project')
+    if value['schema_version'] == VERSION and not {'curriculum_stages', 'active_curriculum_stage'} <= value.keys():
+        raise ValueError('Version 2 projects require a curriculum plan and selected stage')
     result=deepcopy(value)
+    result['curriculum_stages'] = validate_stages(result.get('curriculum_stages', default_stages()))
     source=result.get('source',{})
     if not isinstance(source,dict) or str(source.get('stage')) not in {s['id'] for s in curriculum.STAGES}:
         raise ValueError('Unknown project curriculum stage')
     source['stage']=str(source['stage'])
+    result.setdefault('active_curriculum_stage', source['stage'])
+    active_stage = next((stage for stage in result['curriculum_stages'] if stage['id'] == result['active_curriculum_stage']), None)
+    if active_stage is None or active_stage['template'] != source['stage']:
+        raise ValueError('Invalid selected curriculum stage or source type')
     if source.get('font') not in ('Leipzig','Bravura','Petaluma'):
         raise ValueError('Unknown project engraving font')
     source['music_seed']=curriculum.integer(source.get('music_seed'),0,2**31-1,'Music seed')

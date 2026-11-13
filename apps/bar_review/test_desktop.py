@@ -37,12 +37,12 @@ class DesktopTests(unittest.TestCase):
         app.press(x, y)
         app.release(x, y)
 
-    def preview(self):
+    def preview(self, source=None):
         image = Image.new('RGB', (1400, 1981), 'white')
         draw = ImageDraw.Draw(image)
         for y in range(100, 150, 10):
             draw.line((50, y, 900, y), fill='black', width=2)
-        with patch.object(curriculum, 'synthetic', return_value=(image, {'kind': 'synthetic'}, None)):
+        with patch.object(curriculum, 'synthetic', return_value=(image, {'kind': 'synthetic'}, source)):
             manifest = curriculum.preview(self.data, dict(stage='0', settings=dict(recipe=[], seed=42)), [])
         self.desktop.latest = manifest
         self.desktop.update_images()
@@ -57,12 +57,118 @@ class DesktopTests(unittest.TestCase):
             self.click(self.desktop.workspaces, (index+.5)/len(WORKSPACES))
             self.assertEqual(self.desktop.workspaces.value, name)
             self.assertEqual(self.desktop.source_panel.visible, name == 'Curriculum')
-            self.assertEqual(self.desktop.recipe_panel.visible, name in ('Curriculum', 'Scan Recipe'))
+            self.assertEqual(self.desktop.recipe_panel.visible, name == 'Scan Recipe')
+            self.assertEqual(self.desktop.image_split.panes[1].visible, name != 'Curriculum')
             self.assertEqual(self.desktop.manifest_view.visible, name == 'Manifest')
             self.assertEqual(self.desktop.payload(), before)
             self.assertIs(self.desktop.latest, manifest)
 
+    def test_curriculum_kern_tracks_displayed_preview_and_project(self):
+        desktop = self.desktop
+        source = '**kern\n*clefG2\n!LO:TX:a:t=Māori & swing\n4c\n*-\n'
+        manifest = self.preview(source)
+        self.assertEqual(desktop.kern_text.text, source)
+        desktop.music_seed.value = 19
+        self.assertIs(desktop.latest, manifest)
+        self.assertEqual(desktop.kern_text.text, source)
+        for name in WORKSPACES:
+            desktop.workspaces.value = name
+            self.assertEqual(desktop.kern_panel.visible, name == 'Curriculum')
+        desktop.workspaces.value = 'Curriculum'
+        desktop.project_path = self.data / 'source-view.musvitlab'
+        desktop.save_project()
+        self.preview('**kern\n4d\n*-\n')
+        desktop.load_project(desktop.project_path)
+        self.assertEqual(desktop.kern_text.text, source)
+        self.preview()
+        self.assertEqual(desktop.kern_text.text, '')
+        self.assertIn('no Humdrum', desktop.kern_text.message)
+        desktop.latest = None
+        desktop.update_images()
+        self.assertIn('Generate', desktop.kern_text.message)
+
+    def test_curriculum_kern_layout_and_independent_scroll(self):
+        desktop = self.desktop
+        source = '\n'.join(f'  <note id="{index}">' + 'C'*200 + '</note>' for index in range(150))
+        self.preview(source)
+        app, viewer = desktop.app, desktop.kern_text
+        for width, height in ((1520,960), (1060,760)):
+            app.render_raster(width,height)
+            self.assertGreater(viewer.w, 200)
+            self.assertGreater(viewer.h, 200)
+            self.assertGreaterEqual(viewer.x, desktop.page_images[0].x+desktop.page_images[0].w)
+            self.assertLessEqual(viewer.x+viewer.w, width)
+            self.assertLessEqual(viewer.y+viewer.h, height-35)
+        centers = desktop.view_centers.copy()
+        x,y = viewer.x+viewer.w//2, viewer.y+viewer.h//2
+        app.wheel(x,y,-1)
+        self.assertGreater(viewer.first_line, 0)
+        app.wheel(x,y,-1,1)
+        self.assertGreater(viewer.horizontal, 0)
+        self.assertEqual(desktop.view_centers, centers)
+        self.click(desktop.kern_panel.children[0].children[1])
+        self.assertEqual((viewer.first_line, viewer.horizontal), (0,0))
+        desktop.workspaces.value = 'Scan Recipe'
+        self.assertFalse(desktop.curriculum_split.dividers[0].visible)
+        desktop.workspaces.value = 'Curriculum'
+        self.assertTrue(desktop.curriculum_split.dividers[0].visible)
+
+    def test_zoom_controls_belong_to_reference_panel(self):
+        desktop = self.desktop
+        self.preview('**kern\n4c\n*-\n')
+        for width,height in ((1520,960),(1060,760)):
+            desktop.app.render_raster(width,height)
+            source, xml_view = desktop.page_images[0], desktop.kern_text
+            for control in (desktop.resolution, desktop.zoom):
+                self.assertGreaterEqual(control.x, source.x)
+                self.assertLessEqual(control.x+control.w, xml_view.x)
+                self.assertLess(control.y+control.h, source.y)
+            self.assertEqual(desktop.reference_controls.children, [desktop.image_controls])
+        for _ in range(2):
+            desktop.workspaces.value = 'Compare'
+            self.assertEqual(desktop.compare_controls.children, [desktop.image_controls])
+            self.assertEqual(desktop.reference_controls.children, [])
+            desktop.workspaces.value = 'Curriculum'
+            self.assertEqual(desktop.reference_controls.children, [desktop.image_controls])
+            self.assertEqual(desktop.compare_controls.children, [])
+
+    def test_drag_reuses_reduced_image_and_skips_other_panes(self):
+        desktop = self.desktop
+        self.preview('**kern\n4c\n*-\n')
+        desktop.zoom.value = '75%'
+        desktop.app.render_raster()
+        viewport = desktop.page_images[0]
+        reduced = viewport._reduced
+        self.assertIsNotNone(reduced)
+        center = viewport.center
+        original_transform = Image.Image.transform
+        x,y = viewport.x+viewport.w//2, viewport.y+viewport.h//2
+        with patch.object(desktop, 'update_images', wraps=desktop.update_images) as refresh, \
+             patch.object(desktop.page_images[1], 'show_pixels') as hidden, \
+             patch.object(desktop.kern_text, 'show_pixels') as xml_draw, \
+             patch.object(Image.Image, 'transform', autospec=True, wraps=Image.Image.transform) as transform:
+            # Inspect transform arguments without replacing Pillow's return value.
+            transform.side_effect = lambda image,*args,**kwargs: original_transform(image,*args,**kwargs)
+            desktop.app.press(x,y)
+            for step in range(1,6):
+                desktop.app.motion(x+step*5,y+step*5,8)
+                desktop.app.render_raster()
+            desktop.app.release(x+25,y+25)
+            refresh.assert_not_called()
+            hidden.assert_not_called()
+            xml_draw.assert_not_called()
+            self.assertTrue(transform.call_args_list)
+            self.assertTrue(all(call.kwargs.get('resample') == Image.Resampling.NEAREST
+                                for call in transform.call_args_list))
+        self.assertNotEqual(viewport.center, center)
+        self.assertIs(viewport._reduced, reduced)
+        desktop.zoom.value = '50%'
+        self.assertIsNot(viewport._reduced, reduced)
+        desktop.zoom.value = '150%'
+        self.assertIsNone(viewport._reduced)
+
     def test_main_viewport_zoom_scroll_drag_linking_and_resize(self):
+        self.desktop.workspaces.value = 'Scan Recipe'
         self.preview()
         raster = self.desktop.app.render_raster()
         image = self.desktop.page_images[0]
@@ -129,6 +235,9 @@ class DesktopTests(unittest.TestCase):
         self.assertAlmostEqual(left.w,old_left+60,delta=2)
         self.assertAlmostEqual(center.w,old_center-60,delta=2)
         self.assertAlmostEqual(right.w,old_right,delta=1)
+        desktop.workspaces.value='Scan Recipe'
+        app.render_raster()
+        old_right=right.w
         drag(desktop.main_split.dividers[1],-50)
         self.assertAlmostEqual(right.w,old_right+50,delta=2)
         widths=[pane.w for pane in desktop.image_split.panes]
@@ -147,14 +256,19 @@ class DesktopTests(unittest.TestCase):
         app.render_raster()
         drag(desktop.main_split.dividers[0],-10000)
         self.assertGreaterEqual(left.w,179)
+        desktop.workspaces.value='Scan Recipe'
+        app.render_raster()
         reset(desktop.image_split.dividers[0])
         self.assertAlmostEqual(desktop.page_images[0].w,desktop.page_images[1].w,delta=1)
+        desktop.workspaces.value='Curriculum'
+        app.render_raster()
         reset(desktop.main_split.dividers[0])
         self.assertEqual([pane.weight for pane in desktop.main_split.panes],desktop.main_split.default_weights)
         self.assertEqual(desktop.payload(),request)
         self.assertIs(desktop.latest,manifest)
 
     def test_recipe_buttons_native_grip_order_and_roundtrip(self):
+        self.desktop.workspaces.value = 'Scan Recipe'
         app = self.desktop
         self.click(app.add_button)
         self.assertEqual(len(app.recipe), 1)
@@ -300,6 +414,7 @@ class DesktopTests(unittest.TestCase):
             self.assertIsNone(app.file_dialog)
 
     def test_numeric_range_controls_roundtrip_and_new_sample(self):
+        self.desktop.workspaces.value = 'Scan Recipe'
         import recipes
         app=self.desktop
         app.recipe=[recipes.entry('rotation','rotate'),recipes.entry('black_white','binary')]
@@ -371,6 +486,7 @@ class DesktopTests(unittest.TestCase):
         self.assertNotIn('preview_values',app.payload()['settings'])
 
     def test_existing_recipe_save_restores_range_selection_and_bounds(self):
+        self.desktop.workspaces.value = 'Scan Recipe'
         import recipes
         app=self.desktop
         path=self.data/'existing.json'
@@ -408,7 +524,7 @@ class DesktopTests(unittest.TestCase):
         self.assertEqual([angle.low.value,angle.high.value],[-2.5,2.5])
         self.assertEqual([threshold.low.value,threshold.high.value],[130,185])
         before=path.read_bytes()
-        with patch('desktop.os.replace',side_effect=OSError('simulated replacement failure')):
+        with patch('desktop_storage.os.replace',side_effect=OSError('simulated replacement failure')):
             with self.assertRaises(OSError):
                 write_recipe(path,b'new recipe')
         self.assertEqual(path.read_bytes(),before)

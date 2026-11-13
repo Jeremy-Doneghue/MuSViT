@@ -28,7 +28,7 @@ LOCK = threading.RLock()
 STAGES = [
     dict(id="0", title="Recognition check", description="One note with staff context. Explore placement and the survival of ledger lines.", examples=["note"], focus="Pitch and staff position", mix="50% clean · 40% mild · 10% moderate"),
     dict(id="1", title="Short passages", description="Two complete bars with varied pitches and rhythms. Compare readable engraving with mild scan damage.", examples=["passage"], focus="Pitch, duration and note spacing", mix="50% clean · 40% mild · 10% moderate"),
-    dict(id="2", title="Systems & pages", description="Complete generated pages with several systems, dynamics and rehearsal marks.", examples=["horn_page", "piano_page", "drums_page"], focus="Density, system order and small symbols", mix="30% clean · 40% mild · 30% moderate"),
+    dict(id="2", title="Systems & pages", description="Complete generated pages with several systems, dynamics and performance text.", examples=["horn_page", "piano_page", "drums_page"], focus="Density, system order and small symbols", mix="30% clean · 40% mild · 30% moderate"),
     dict(id="3", title="Notation & voices", description="Focused examples of piano voices, cross-staff beaming and drum notation. These fixtures illustrate only part of the proposed stage.", examples=["piano", "cross_staff", "drums"], focus="Voices, staff attachment and noteheads", mix="30% clean · 40% mild · 30% moderate"),
     dict(id="4", title="Real scans", description="Explore pages imported in Bar Review. These are source scans, not clean references or automatically verified training pairs.", examples=[], focus="Actual scan appearance and legibility", mix="Real + synthetic · proportion to be calibrated"),
 ]
@@ -117,34 +117,18 @@ def settings(payload):
 
 
 def synthetic(example, seed, font, folder):
-    from experiments.full_page_omr.datasets.one_note_data import make_note, PITCHES
-    from experiments.full_page_omr.datasets.short_staff_data import make_passage
-    from experiments.full_page_omr.datasets.clean_page_data import make_score
-    from experiments.full_page_omr.representation.codec_fixtures import piano, cross_staff, drums
-    from experiments.full_page_omr.datasets.pilot_data import export_pilot
-    if example not in EXAMPLES or font not in ("Leipzig", "Bravura", "Petaluma"):
-        raise ValueError("Unknown example or font")
-    seed = integer(seed, 0, 2**31-1, "Music seed")
-    if example == "note":
-        source = make_note(PITCHES[seed % len(PITCHES)])
-    elif example == "passage":
-        source = make_passage(seed)
-    elif example.endswith("_page"):
-        source = make_score(seed, example.removesuffix("_page"))
-    else:
-        source = {"piano": piano, "cross_staff": cross_staff, "drums": drums}[example]().source
-    options = dict(inputFrom="musicxml", breaks="encoded", pageWidth=2100, pageHeight=2970,
-                   scale=55, header="none", footer="none", justifyVertically=False, font=font)
-    manifest = export_pilot(folder, scores=[("example", source)], render_options=options)
-    record = manifest["records"][0]
-    with Image.open(folder / record["image"]) as opened:
-        image = opened.convert("RGB")
-    return image, dict(kind="synthetic", example=example, music_seed=seed,
-                       font=font, render_options=options, renderer=manifest['renderer'],
-                       generator_source_hashes=manifest['source_hashes'],
-                       source_sha256=hashlib.sha256(source.encode()).hexdigest(),
-                       split="exploration-unassigned", target_length=record["target_length"],
-                       note="Fixture seeds affect note/passage/page generators; focused voice fixtures are fixed."), source
+    from experiments.full_page_omr.generation.humdrum_scores import make_score, render
+    if example not in EXAMPLES:
+        raise ValueError('Unknown example')
+    seed = integer(seed, 0, 2**31-1, 'Music seed')
+    score = make_score(example, seed)
+    image, provenance = render(score, folder, font)
+    provenance.update(kind='synthetic', example=example, music_seed=seed, font=font,
+        generator_source_hashes={name: hashlib.sha256((ROOT/'experiments/full_page_omr'/name).read_bytes()).hexdigest()
+                                for name in ['generation/humdrum_scores.py','generation/font_resources.py']},
+        split='exploration-unassigned',
+        note='Direct Humdrum source; SVG and MEI are derived, not model labels.')
+    return image, provenance, score.source
 
 
 def rotate_antialiased(image, angle):
@@ -211,10 +195,7 @@ def augment(image, config, on_step=None):
 
 def source_fingerprint(payload):
     """Conservative source reuse key; no augmentation inputs or training data."""
-    files = ['datasets/one_note_data.py', 'datasets/short_staff_data.py',
-             'datasets/clean_page_data.py', 'datasets/pilot_data.py',
-             'representation/codec_fixtures.py', 'representation/score_codec.py',
-             'representation/score_semantics.py', 'generation/font_resources.py']
+    files = ['generation/humdrum_scores.py', 'generation/font_resources.py']
     value = dict(stage=str(payload.get('stage', '0')), example=payload.get('example'),
                  seed=payload.get('music_seed', 7), font=payload.get('font', 'Leipzig'),
                  implementation=hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
@@ -233,12 +214,15 @@ def reuse_source(data, preview_id, fingerprint):
         if manifest.get('source_fingerprint') != fingerprint or manifest['source']['kind'] != 'synthetic':
             return None
         png = artifact(data, preview_id, 'source.png').read_bytes()
-        xml = artifact(data, preview_id, 'source.musicxml').read_bytes()
+        source = artifact(data, preview_id, 'source.krn').read_bytes()
         if any(hashlib.sha256(content).hexdigest() != manifest['files'][name]
-               for name, content in [('source.png', png), ('source.musicxml', xml)]):
+               for name, content in [('source.png', png), ('source.krn', source)]):
             return None
+        for name, digest in manifest['source'].get('derived_sha256', {}).items():
+            if name not in ('source.svg', 'source.mei') or hashlib.sha256(artifact(data, preview_id, name).read_bytes()).hexdigest() != digest:
+                return None
         with Image.open(io.BytesIO(png)) as image:
-            return image.convert('RGB'), manifest['source'], xml.decode()
+            return image.convert('RGB'), manifest['source'], source.decode('utf-8')
     except (OSError, ValueError, KeyError, TypeError):
         return None
 
@@ -313,8 +297,17 @@ def preview(data, payload, documents, *, progress=None, source_preview=None):
                 filename = f"{name}{suffix}.png"
                 files[filename] = hashlib.sha256((folder / filename).read_bytes()).hexdigest()
         if source:
-            (folder / "source.musicxml").write_text(source)
-            files["source.musicxml"] = hashlib.sha256(source.encode()).hexdigest()
+            (folder / 'source.krn').write_text(source, encoding='utf-8')
+            files['source.krn'] = hashlib.sha256(source.encode('utf-8')).hexdigest()
+            for name, digest in provenance.get('derived_sha256', {}).items():
+                if name not in ('source.svg','source.mei'):
+                    raise ValueError('Unknown derived source artifact')
+                original = artifact(data, source_preview, name) if source_reused else Path(temp)/'render'/name
+                content = original.read_bytes()
+                if hashlib.sha256(content).hexdigest() != digest:
+                    raise ValueError('Derived source artifact checksum mismatch')
+                (folder/name).write_bytes(content)
+                files[name] = digest
         timings['save_images_and_hashes'] = round(time.perf_counter()-save_started, 4)
         timings['worker_total'] = round(time.perf_counter()-started, 4)
         report('Writing manifest', .97)
@@ -339,7 +332,7 @@ def preview(data, payload, documents, *, progress=None, source_preview=None):
 def artifact(data, preview_id, filename):
     if len(preview_id) != 32 or any(c not in "0123456789abcdef" for c in preview_id):
         raise ValueError("Invalid preview ID")
-    if filename not in {"source.png", "augmented.png", "source-1024.png", "augmented-1024.png", "manifest.json", "source.musicxml"}:
+    if filename not in {"source.png", "augmented.png", "source-1024.png", "augmented-1024.png", "manifest.json", "source.krn", "source.svg", "source.mei", "source.musicxml"}:
         raise ValueError("Unknown preview artifact")
     return data / "curriculum" / preview_id / filename
 
@@ -366,7 +359,7 @@ def run_persistent_worker(root):
     write_atomic(root/'startup.progress.json', dict(label='Loading engraving dependencies', fraction=.02))
     import verovio  # noqa: F401
     import cairosvg  # noqa: F401
-    from experiments.full_page_omr.datasets import one_note_data, short_staff_data  # noqa: F401
+    from experiments.full_page_omr.generation import humdrum_scores  # noqa: F401
     write_atomic(root/'startup.progress.json', dict(label='Loading Augraphy (once per session)', fraction=.02))
     import augraphy  # noqa: F401
     write_atomic(root/'ready.json', dict(pid=os.getpid()))

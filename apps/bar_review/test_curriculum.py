@@ -134,7 +134,7 @@ class CurriculumTests(unittest.TestCase):
             data = Path(temp)
             request = dict(stage='2', example='horn_page', font='Leipzig', music_seed=7,
                            settings=dict(recipe=[], seed=42))
-            source = (page_image(), dict(kind='synthetic'), '<score-partwise/>')
+            source = (page_image(), dict(kind='synthetic'), '**kern\n4c\n*-\n')
             events = []
             with patch.object(curriculum, 'synthetic', return_value=source) as render:
                 first = curriculum.preview(data, request, [], progress=events.append)
@@ -365,7 +365,7 @@ class CurriculumTests(unittest.TestCase):
             with zipfile.ZipFile(io.BytesIO(curriculum.export_preview(root,first['id']))) as archive:
                 manifest = json.loads(archive.read('manifest.json'))
                 self.assertIn('not approved',manifest['status'])
-                self.assertNotIn('source.musicxml',archive.namelist())
+                self.assertNotIn('source.krn',archive.namelist())
                 for name, digest in manifest['files'].items():
                     self.assertEqual(hashlib.sha256(archive.read(name)).hexdigest(),digest)
                 with Image.open(io.BytesIO(archive.read('augmented-1024.png'))) as image:

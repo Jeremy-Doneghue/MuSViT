@@ -1,7 +1,9 @@
 # Full-page OMR workspace
 
 Start with [the project diary](../../PROJECT_DIARY.md) for decisions and the latest
-results. This directory contains the current `musvit-score-v1` experiments.
+results. The active Curriculum Lab preview path uses
+[direct Humdrum sources](docs/HUMDRUM_PIPELINE.md). Earlier `musvit-score-v1`
+trainers/results remain historical experiment tools.
 The original bekern/Lightning pipeline has been removed; its implementation
 remains available in the [original MuSViT repository](https://github.com/OMR-PRAIG-UA-ES/MuSViT).
 
@@ -22,8 +24,20 @@ remains available in the [original MuSViT repository](https://github.com/OMR-PRA
 
 ## Current experiment path
 
+The selected next model-target direction is the
+[Humdrum scope and initial conversion audit](docs/HUMDRUM_SCOPE.md) (2026-11-14):
+pitched parts, piano, percussion, common dynamics and performance text, with
+omissions flagged for review. MusicXML remains the source/editor interchange.
+Direct Humdrum generation, preview rendering, source display and SVG/MEI export
+are implemented; arbitrary-input normalization and the new tokenizer/training
+adapter remain pending. This supersedes expanding the MusicXML-tree target as
+the immediate priority.
+
 Current direction is the [full-model curriculum and dataset design](docs/CURRICULUM_DATASET.md),
-with calibrated Augraphy variation and real-scan evaluation. The latest completed
+with calibrated Augraphy variation and real-scan evaluation. The 2026-11-13
+[MusicXML normalization policy and audit](docs/NORMALIZATION_POLICY.md) now
+specify target cleanup before a new training export; six audited normalization
+gaps remain in the codec. The latest completed
 [placement replication](docs/PLACEMENT_COMPARISON.md) reached 48/56 selected
 validation exact for expanded placement training in both seeds; the controls
 reached 25/56 and 13/56. This is a finite one-note appearance diagnostic, not

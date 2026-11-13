@@ -58,10 +58,49 @@ workers. Other platforms need the same Verovio/Cairo setup as the web lab.
 
 The top workspace bar follows Blender's layout:
 
-- **Curriculum:** stage/source properties, paired page viewer, scan recipe stack.
+- **Curriculum:** editable curriculum stages and source properties, with the
+  reference image beside its read-only **kern / Humdrum source.
 - **Scan Recipe:** paired viewer and more room for effect properties.
 - **Compare:** the source and every degradation level side by side.
 - **Manifest:** provenance and parameters of the selected level's preview.
+
+The Curriculum workspace has **Add**, **Duplicate**, **Remove**, **Move up** and
+**Move down** stage controls (1–32 stages). Each stage has an editable name,
+description, learning focus and mix notes. **Source type** maps it to an existing
+generator family—Recognition check, Short passages, Systems & pages, Notation &
+voices—or Real scans. The Source panel selects a supported example/font/music
+seed or imported page. Stage IDs remain stable when renamed/reordered, and
+duplicated stages have independent details. **Reset stage details** restores the
+selected source type's suggested text. Names must be nonblank and unique.
+
+Stage order, details, source types and selected stage are saved with the project.
+Mix notes describe the curriculum plan; they do not configure a training sampler
+or launch training. The generators' musical coverage remains unchanged. The
+degradation sidebar and augmented image are available in **Scan Recipe**; all
+levels remain available in **Compare**.
+
+In **Curriculum**, the reference and **kern / Humdrum** panes share a draggable divider.
+The source pane shows the exact `source.krn` belonging to the displayed
+preview, with monospaced text and line numbers. Scroll for more lines,
+Shift+scroll sideways for long lines, and use **Top** to reset the view. Pending
+source-control edits keep the old image and matching XML visible until Generate
+finishes. Saved project previews restore their embedded XML automatically.
+Imported scan previews have no score source and show an empty-state message.
+New synthetic previews are generated directly in Humdrum and rendered through
+Verovio; MusicXML and the old model codec are absent from this path. ZIP/project
+exports retain `source.krn`, derived `source.svg` and `source.mei`. Earlier
+MusicXML-only previews need regeneration to show Humdrum. See the
+[direct-source pipeline](../../experiments/full_page_omr/docs/HUMDRUM_PIPELINE.md).
+The web lab also exposes the displayed source in a read-only section.
+
+This pane is for inspection; it does not edit or normalize the source. Its divider
+and scroll position are session-only and are not added to the project format.
+
+Resolution and zoom controls live inside **Source / Reference**, above the image,
+so they do not span the Humdrum pane. Compare retains shared controls above its
+image columns. Panning reuses a reduced image at zoom levels below 100%, redraws
+only visible image panes and skips preview/manifest/XML refreshes. At 100–400%
+the viewport is sampled directly without allocating a magnified full-page cache.
 
 The lab is a **project**, starting with editable Clean, Mild, Moderate and Heavy
 levels. Select a level in the recipe sidebar to edit its independent recipe, seed,
@@ -79,13 +118,32 @@ A batch failure retains previous previews and reports the error; successful
 levels still finish. Changing editor selection while rendering does not attach
 the result to the wrong level.
 
-**Save project** (Ctrl+S) creates one `.musvitlab` file containing:
+The workbench's **File** menu provides Open project, Save project, Save project
+as, legacy recipe import/export and displayed preview ZIP export. The toolbar's
+Save project button performs the same action as File → Save project.
+
+| Action | macOS | Windows/Linux |
+| --- | --- | --- |
+| Save current project | Command+S | Ctrl+S |
+| Save project as… | Command+Shift+S | Ctrl+Shift+S |
+| Open project… | Command+O | Ctrl+O |
+| Export displayed preview ZIP… | Command+Shift+E | Ctrl+Shift+E |
+| Generate selected preview | Command+Enter | Ctrl+Enter |
+
+**Save project** updates the current saved/opened `.musvitlab` directly, keeping
+the previous version in `.project-backups/`. For an untitled project it opens the
+save browser. **Save project as…** always opens that browser; after a successful
+save the chosen file becomes the current project. Cancelling leaves the current
+path unchanged.
+
+Each `.musvitlab` file contains:
 
 - Every level's name, order, recipe/effect IDs, enabled steps, numeric ranges,
   seed, manual preview choices, selected starting recipe and collapsed panels.
 - Selected curriculum stage/example, font, music seed and imported scan/page.
+- Complete customized curriculum stage list, order, details and source types.
 - Each level's exact most recent preview: source/augmented PNGs, native/model
-  inputs, manifest/hashes and synthetic MusicXML when available.
+  inputs, manifest/hashes and synthetic Humdrum with derived SVG/MEI when available.
 - Active level/workspace, resolution, zoom, linked state, pan centers, region
   proportions and theme.
 
@@ -96,6 +154,8 @@ history are not bundled. Opening a project does not create or approve annotation
 Preview assets are verified before import. Identical local artifacts are reused;
 conflicting immutable preview IDs are restored under new IDs. Projects have a
 512 MiB uncompressed limit. The ZIP-based bundle is not a training dataset export.
+Projects now save as schema v2; v1 projects open with the five default stages.
+Older app versions reject v2 rather than silently discarding customized stages.
 
 Project saves atomically update the chosen file and retain its prior version in
 `.project-backups/`. Save/Open remember the current project folder/filename.
@@ -104,9 +164,9 @@ previews and pending edits; saving does not generate images. Opening a project i
 blocked while rendering. Old v1/v2 recipe JSON can be opened through **Open project**
 to import settings into the selected level, then saved as part of the full project.
 
-Switching workspaces preserves the source, recipe and displayed preview. All five
-stages, eight synthetic examples, three fonts and all 17 ordered effects come from
-the shared catalog. Recipes support repeated effects, bypass, removal, Up/Down and
+Switching workspaces preserves the source, recipe and displayed preview. The five
+initial stage templates, eight synthetic examples, three fonts and all 17 ordered
+effects come from the shared catalog. Recipes support repeated effects, bypass, removal, Up/Down and
 Blender panel-grip dragging; the executed order follows the visible order.
 
 Drag the narrow borders beside either sidebar to adjust its width, or the border
@@ -185,7 +245,7 @@ thread processes submitted jobs serially. The progress bar shows warmup and then
 warm process, with a 120-second per-job deadline. Controls stay responsive. Editing during rendering marks
 the result as belonging to earlier settings. **Export preview ZIP** always
 exports the displayed immutable preview, including its original request, images,
-hashes and MusicXML where available. Full worker errors also print to the terminal.
+hashes and Humdrum/SVG/MEI where available. Full worker errors also print to the terminal.
 
 The progress bar names the active phase/effect and shows elapsed wall time. It
 advances at pipeline milestones, not an estimated percentage of execution time:
@@ -204,7 +264,7 @@ Augraphy once so later recipe changes need no additional dependency startup.
 The desktop also remembers up to 64 synthetic
 source selections per session and reuses an intact previous engraving when only
 the recipe/augmentation seed changes. Source inputs, relevant code and dependency
-versions must match, and PNG/MusicXML hashes are verified. A missing/corrupt source
+versions must match, and PNG/Humdrum/derived artifact hashes are verified. A missing/corrupt source
 falls back to fresh rendering. Every resulting preview still has a new immutable
 folder. Real scans are loaded from their current page files. Detail panning reuses
 decoded pages and supplies only visible in-memory pixels instead of writing/reopening PNGs.
@@ -350,7 +410,7 @@ imported document collection; it does not require the notation editor to load.
   Its original scan is the comparison reference; no clean ground truth is inferred.
 - **Export preview & recipe** downloads exactly the displayed preview, both input
   resolutions, a manifest with settings/parameters/seeds/versions/hashes, and source
-  MusicXML for synthetic examples. Changing controls does not change an existing
+  Humdrum plus derived SVG/MEI for synthetic examples. Changing controls does not change an existing
   preview/export; generate again first.
 
 Preview artifacts are append-only in `<data-dir>/curriculum/<unique-id>/` and
@@ -459,6 +519,44 @@ conversion. It is installed as an MIT-licensed npm dependency; its license is in
 `node_modules/smoosic/LICENSE`. The editor integration needs representative manual
 testing for MusicXML fidelity, jazz symbols and keyboard ergonomics before using
 it to build a trusted dataset.
+
+## Desktop code navigation
+
+The desktop entry point remains `desktop.py`. Responsibilities are split by
+concern so UI, worker and file-format changes have a clear home:
+
+| Module | Responsibility |
+| --- | --- |
+| [desktop.py](desktop.py) | CLI, session state, level/source/recipe editing, view coordination and shutdown. |
+| [desktop_layout.py](desktop_layout.py) | Initial BUI tree, workspace choices and callback bindings. |
+| [desktop_curriculum.py](desktop_curriculum.py) | Stage editing, source-type selection, add/duplicate/remove/reorder controls. |
+| [curriculum_plan.py](curriculum_plan.py) | Project-local stage defaults, limits and validation, independent of BUI. |
+| [desktop_widgets.py](desktop_widgets.py) | Reusable image viewports, numeric ranges, draggable regions and recipe panels. |
+| [desktop_preview.py](desktop_preview.py) | Selected/batch job submission, queued progress and completion polling. |
+| [desktop_projects.py](desktop_projects.py) | Project/legacy-recipe snapshots, restoration and save/open/export actions. |
+| [desktop_storage.py](desktop_storage.py) | Read-only scan collection access, exclusive exports and atomic backed-up writes; no BUI dependency. |
+| [desktop_dialog.py](desktop_dialog.py) | Non-blocking file-browser lifecycle on the existing native event loop. |
+| [lab_project.py](lab_project.py) | Portable archive schema, validation, assets and immutable restore. |
+| [preview_worker.py](preview_worker.py) | Crash-isolated preview process and IPC. |
+
+`CurriculumDesktop` owns the live session and resources. Its explicit action
+methods delegate to `ProjectActions` and `PreviewJobs`, which receive the host
+through their constructors. Runtime imports flow from the entry point into these
+modules; collaborators use type-only imports of the host. Widgets use callbacks
+and do not depend on the coordinator. Keep new reusable controls in the widget
+module and initial layout changes in the layout module.
+
+Only the UI thread mutates BUI nodes. Preview submissions capture request and
+document snapshots; the batch runner executes on the single executor thread and
+posts plain progress/results for UI polling. The coordinator closes the dialog,
+worker and executor. File callbacks capture project/recipe bytes or a preview ID
+when opened, preserving the displayed snapshot during asynchronous activity.
+Retain the synchronous RGBA image path and non-blocking dialog loop: both avoid
+previously reproduced native crashes.
+
+The existing desktop/project tests exercise interactions through the coordinator,
+including project portability, dialog snapshots, stale jobs, ranges and resizing.
+Install the desktop extra to run them; without BUI they are skipped.
 
 ## Checks
 

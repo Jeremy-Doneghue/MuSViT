@@ -34,8 +34,12 @@ This is a **monorepo** collecting the experiments around MuSViT. Every experimen
 For ongoing synthetic full-page/multi-page OMR work, start with the
 [project diary](PROJECT_DIARY.md): current state, proposed next steps, and dated
 session handoffs. The [full-page directory guide](experiments/full_page_omr/README.md)
-maps the current experiment modules. The [synthetic parts guide](experiments/full_page_omr/docs/SYNTHETIC_PARTS.md)
-documents the generator and dataset conventions.
+maps the current experiment modules. New Curriculum Lab previews use the
+[direct Humdrum pipeline](experiments/full_page_omr/docs/HUMDRUM_PIPELINE.md):
+canonical kern/Humdrum sources, Verovio SVG/MEI and raster outputs. MusicXML is
+optional at import/editor boundaries. The [synthetic parts guide](experiments/full_page_omr/docs/SYNTHETIC_PARTS.md)
+records the earlier MusicXML generator/dataset conventions; existing trainers
+remain historical tools pending the new Humdrum tokenizer/training adapter.
 
 This project includes:
 - A central CLI (`musvit`) for staff-level OMR and symbol detection.

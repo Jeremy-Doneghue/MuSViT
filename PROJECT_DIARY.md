@@ -13,9 +13,17 @@ polyphonic case, but other instruments, independent voices and staff arrangement
 must be supported. Current synthetic engraving results do not establish real-scan
 or handwriting recognition.
 
-- MusicXML is the canonical synthetic source and current interchange format;
-  MEI, rasters and model tokens are derived. The user did not require raw MusicXML
-  generation as the model target. The approved restricted target is
+- **2026-11-14 direction:** normalized Humdrum centered on **kern is the selected
+  next model-target direction. First milestone includes pitched parts, piano,
+  percussion, common dynamics and performance text; supported content should be
+  transcribed with omissions flagged for review. See the
+  [scope and initial conversion audit](experiments/full_page_omr/docs/HUMDRUM_SCOPE.md).
+  Humdrum is now also the canonical source for new Curriculum Lab previews;
+  Verovio derives SVG, MEI and raster images directly. MusicXML is optional at
+  import/editor-export boundaries. See the [implemented preview pipeline](experiments/full_page_omr/docs/HUMDRUM_PIPELINE.md).
+  Imported-score normalization and the new tokenizer/training adapter remain
+  pending; existing datasets/checkpoints need no compatibility work.
+- Earlier MusicXML-tree experiments remain historical tools. Their implemented restricted target is
   `musvit-score-v1` (614 fixed tokens); see the [codec contract](experiments/full_page_omr/docs/SCORE_CODEC.md).
   On 2026-11-06 the user also approved a diagnostic four-token pitch target,
   paired against the current target on the same all-pitches-taught images. It is
@@ -48,6 +56,130 @@ or handwriting recognition.
   [original repository](https://github.com/OMR-PRAIG-UA-ES/MuSViT) for the latter.
 
 ## Current state
+
+**2026-11-14 direct Humdrum curriculum pipeline:** user selected canonical
+Humdrum sources and targets, optional MusicXML boundaries, and kern in the source
+viewer. New Curriculum Lab previews now generate Humdrum directly for all eight
+examples and render that exact source through Verovio to SVG/MEI/raster. No
+MusicXML conversion, old codec/pilot exporter or ML dataset imports in this path.
+Desktop/web text views display `source.krn`; previews, ZIPs and portable projects
+retain it plus derived SVG/MEI. Native tests cover eight examples, three fonts,
+pedal/text/percussion/cross-staff checks, deterministic replay, source reuse and
+portable asset restoration. Full app suite: 70 passed in 15.500s; JS syntax and
+whitespace checks pass. Headless native screenshots inspected. See the
+[implemented pipeline](experiments/full_page_omr/docs/HUMDRUM_PIPELINE.md).
+Limit: generated-source conventions only; arbitrary Humdrum normalization and a
+new training tokenizer/adapter remain pending. Earlier MusicXML trainers are not
+Humdrum trainers. Exact next action for the app: restart desktop/regenerate a
+synthetic preview to inspect kern; for modeling: extend scoped-notation checks,
+then define the Humdrum tokenizer/adapter before a fresh training export.
+
+**2026-11-14 selected Humdrum scope and first smoke probes:** user approved the
+kern-based direction and chose dynamics/performance text plus percussion alongside
+pitched parts/piano from the first milestone, with supported content transcribed
+and omissions flagged. Added [scope contract](experiments/full_page_omr/docs/HUMDRUM_SCOPE.md)
+and isolated `diagnostics.humdrum_scope_audit`. Verovio 5.0.0 converts/reimports
+horn, piano and drum fixtures without native failure. This is not fidelity
+acceptance: horn instructions are not found in reimported MEI text, horn glissando
+and piano pedal elements are absent, while drum instruction strings are found.
+No normalizer/tokenizer/editor-export path or training change implemented.
+Exact next action: isolate text, pedal and glissando conversion gaps with minimal
+fixtures and select/repair a converter before freezing target conventions.
+
+**2026-11-14 reference controls and faster panning:** resolution/zoom/Fit controls
+now sit inside Source / Reference, above its image; Compare retains shared controls.
+Drag panning caches a reduced page below 100% and uses fast viewport copies,
+skips identical redraws and refreshes only visible image panes. Quick second
+presses also start a drag. Local 75%-zoom headless trace: median frame 8.41→0.577ms,
+p95 8.80→0.642ms (180 measured frames each; layout also changed, not an isolated
+cache ablation or native latency guarantee). All 67 app tests passed; normal and
+minimum-size screenshots inspected. Native Cocoa drag smoothness unmeasured.
+Exact next action: restart desktop and try dragging a zoomed reference; new source
+or zoom incurs one initial cache build, later drags reuse it.
+
+**2026-11-14 Curriculum MusicXML inspector:** Curriculum now shows the rendered
+reference beside a resizable, read-only MusicXML pane with monospaced text, line
+numbers, vertical/Shift-horizontal scrolling and Top reset. Reads the exact source
+artifact of the displayed preview; pending controls do not change its ownership.
+Saved project XML restores through existing bundled assets; scan/no-preview states
+show explanatory placeholders. Other workspaces retain their image/recipe views.
+All 65 app tests passed, including new source binding/project restoration and
+layout/scroll checks at normal/minimum window sizes. Real one-note engraving
+headless screenshot inspected; native window interaction not repeated. No codec,
+training, dataset or project schema change. Exact next action: restart the desktop,
+generate or reopen a synthetic preview in Curriculum and inspect its source.
+
+**2026-11-13 MusicXML normalization policy and executed audit:** user selected
+retaining MusicXML, normalizing ambiguous features and considering explicit
+omissions; clarified that existing datasets/checkpoints are disposable at this
+early stage. This supersedes the earlier proposed Humdrum-first audit below.
+Added [normalization policy](experiments/full_page_omr/docs/NORMALIZATION_POLICY.md)
+covering canonical timing/divisions, chord/voice/direction ordering, defaults/IDs,
+preserved notation and proposed named omissions. Added a renderer-free paired
+codec audit: 15 cases, 9 satisfied, 6 normalization gaps, no lost distinctions or
+probe errors; all token round trips/idempotence checks passed. Existing codec and
+constrained-decoding suites: 23 tests passed. Production normalization is unchanged;
+this completes policy/audit work, not its implementation. Exact next action:
+apply exact timing/default/declaration cleanup directly to the current codec,
+then event-based ordering with independent onset/span checks and rendering review.
+No migration/version-compatibility work is required by the user.
+
+**2026-11-13 Transcoda review (proposal, no implementation decision):** user
+raised returning to **kern/bekern. Review supports prioritizing a compact,
+normalized Humdrum target audit before a large training export, while retaining
+MusicXML sources/interchange. Transcoda does not compare against our codec, and
+its normalization includes target-content removal as well as canonical ordering.
+Its note-focused contract strips text/dynamics and reports omitted courtesy
+accidentals; that contract does not satisfy our complete-part requirements.
+The historical bekern audit found implementation losses, not proof that Humdrum
+cannot express the required notation. No codec replacement or pipeline restoration
+was selected/implemented. Proposed next action: inspect Transcoda conversion and
+normalization on our existing coverage fixtures, measure target lengths and
+round-trip losses (including written pitch/transposition), then specify a bounded
+comparison if coverage is adequate. This is a proposed refinement of the earlier
+full-model-first sequence, not an agreed change to it.
+
+**2026-11-08 reference-focused Curriculum and editable stages:** Curriculum now
+hides the degradation sidebar/augmented column and shows a single reference
+viewport beside the stage/source editor. Scan Recipe retains degradation editing
+and paired views; Compare retains all levels. User selected full stage management:
+Add/Duplicate/Remove/Move up/down (1–32 stages), unique editable names, descriptions,
+learning focus/mix notes and supported source-type selection are implemented.
+Stable stage identities are separate from backend generator IDs. Projects now
+save as schema v2 with the complete curriculum plan/selection; old v1 projects
+open with default stages. Mix notes are planning text, not a training scheduler.
+All 63 app tests pass; normal/minimum-size geometry and screenshot inspected.
+Native UI interaction was not repeated. Next action: restart desktop, customize
+the stage list in Curriculum and Save project to retain the full plan.
+
+**2026-11-08 desktop footer layout:** status and progress now share one footer
+row, with progress aligned right at 30% of the available row width. All 11
+desktop tests pass; visible-progress geometry checked at 1520×960 and 1060×760,
+and headless screenshot visually inspected. Next action: restart desktop to use
+the compact footer.
+
+**2026-11-08 desktop File menu and shortcuts:** the workbench header now has
+File → Open project, Save project, Save project as, Import/Export recipe and
+Export preview ZIP. Command+S (Ctrl+S elsewhere) and the Save toolbar button
+atomically update the current opened/saved `.musvitlab` without a browser,
+retaining `.project-backups/`; untitled projects request a filename. Save As
+(Command+Shift+S) always opens the browser and switches the current path only
+after success. Open is Command+O; preview ZIP export is Command+Shift+E.
+All 60 app tests pass, including actual menu clicks/shortcut events, current-path
+updates, Save As/Open transitions and failed-write preservation. Headless menu
+layout inspected; live Cocoa key delivery was not re-tested. Exact next action:
+restart desktop, open/save a project, then use Command+S for in-place updates.
+
+**2026-11-08 desktop code organization:** `desktop.py` now delegates initial
+layout, reusable widgets, preview jobs, project actions and BUI-independent file
+storage to five focused `desktop_*` modules. The coordinator retains live session
+state, editing/view callbacks and resource lifetime; entry point and callback API
+are preserved. See [desktop code navigation](apps/bar_review/README.md#desktop-code-navigation)
+for module ownership and threading constraints. All 57 app tests pass after the
+refactor; initial headless renders of all four workspaces are pixel-identical to
+the pre-refactor version. Native Cocoa interaction was not repeated in this
+session. Next action: continue workbench development using the module guide;
+restart the desktop to load the refactor.
 
 **2026-11-08 whole-project Curriculum Lab:** desktop Save/Open now operate on one
 portable `.musvitlab` project, replacing the main individual-recipe save flow.
@@ -1619,3 +1751,348 @@ full metrics and transient troubleshooting in subsystem reports rather than repe
   dataset or model/training change added. Exact next action: restart desktop,
   configure levels and common curriculum source, Generate all levels in Compare,
   then Save project; import older recipe JSON into a selected level as needed.
+
+
+- **2026-11-08 — Desktop workbench concern separation:** user requested a
+  maintainability refactor of the growing desktop entry point. Extracted initial
+  BUI construction/bindings into `desktop_layout.py`, callback-based reusable
+  widgets into `desktop_widgets.py`, job submission/batch/progress polling into
+  `desktop_preview.py`, project/legacy-recipe snapshots and actions into
+  `desktop_projects.py`, and read-only collection access/atomic backed-up writes
+  into BUI-independent `desktop_storage.py`. `CurriculumDesktop` retains shared
+  session state, level/source/recipe/view coordination, dialog ownership and
+  worker/executor shutdown. Explicit delegating methods preserve existing caller
+  and callback APIs; collaborators receive the host explicitly, with type-only
+  host imports to avoid runtime cycles. Existing storage helper imports remain
+  available through the entry module. Updated the atomic-failure test patch to
+  target the storage implementation. Added the README module/ownership/threading
+  guide and documented native image/dialog invariants. Main file reduced from
+  1,300 to about 660 lines. No file formats, default recipes, datasets, scans,
+  annotation databases, weights or existing user project files were changed.
+  Checks: baseline 57 tests passed in 14.647s; after fixing a missed Separator
+  import during extraction, all 57 app tests passed in 14.360s. Existing tests
+  cover real input/layout interactions, project/asset restoration, manual ranges,
+  stale results, save snapshots/backups and worker/server failure handling.
+  Separate headless comparison rendered each of Curriculum, Scan Recipe, Compare
+  and Manifest from the Git baseline and refactored code: all initial workspace
+  images were pixel-identical. Temporary comparison outputs were cleaned up.
+  Compilation and whitespace checks passed. Limits: native Cocoa event-loop
+  interaction was not repeated; collaborators intentionally share the existing
+  coordinator state rather than introducing a new application-state model.
+  Exact next action: restart the desktop and continue workbench development in
+  the responsible module listed in README's Desktop code navigation section.
+
+
+- **2026-11-08 — File menu and current-project Save hotkeys:** user requested
+  menu-bar file actions and Command+S overwriting the current project. Added a
+  BUI header File menu with Open project, Save project, Save project as, Import
+  recipe, Export recipe and Export preview ZIP. Menu entries, window hotkeys and
+  toolbar Save share coordinator callbacks. `ProjectActions.save_project` bundles
+  current state and writes directly to the saved/opened project path; untitled
+  projects use the existing non-blocking browser. Shared write helper preserves
+  atomic updates/backups and changes the current path only after success. Save As
+  retains dialog-open snapshots and always requests a filename. Bindings: Cmd/Ctrl
+  S for Save, Shift+S for Save As, O for Open, Shift+E for preview ZIP export;
+  existing Cmd/Ctrl+Enter generates the selected preview. Inspection of the local
+  BUI Cocoa source confirmed Command and Control map to the same kit CTRL bit.
+  README documents menu actions and platform hotkeys. Existing refactor work was
+  preserved; no user project files or data were overwritten during development.
+  Checks: all 60 app tests passed in 14.425s. Added actual BUI shortcut-event tests
+  for first save, repeated in-place overwrite/exact backup, Save As path switching,
+  Open then Save, plus failed atomic replacement retaining original bytes/path.
+  Actual header menu clicks verify Open, Save As, recipe import/export and preview
+  export's missing-preview handling. Headless CLI screenshot rendered successfully
+  and was visually inspected at `/private/tmp/musvit-file-menu-20261108.png`.
+  Compilation and whitespace checks passed. Limits: menu is the BUI workbench
+  header, not a new macOS system-menu bridge; native Cocoa event-loop key delivery
+  was not exercised in this session. Exact next action: restart the workbench,
+  open or save a project once, then use Command+S to update that project directly;
+  use Command+Shift+S when a different filename is wanted.
+
+
+- **2026-11-08 — Progress aligned to footer right:** user requested moving the
+  full-width bottom progress bar into the right side of the application footer.
+  Changed only initial layout: status and progress share a Row with 70/30 width
+  weights and 12px spacing. Existing progress visibility, text and job callbacks
+  are retained. All 11 desktop tests passed in 0.853s. Executed headless geometry
+  checks with visible progress at 1520×960 and minimum 1060×760: status/progress
+  share a y-coordinate, progress follows status without overlap, occupies less
+  than 35% of window width and remains within the window. Screenshot visually
+  inspected: `/private/tmp/musvit-footer-progress-20261108.png`. Whitespace check
+  passed. No native event-loop check or backend test rerun for this layout-only
+  change. Exact next action: restart desktop and generate a preview to see
+  progress at the footer's right edge.
+
+
+- **2026-11-08 — Reference-focused Curriculum and full stage management:** user
+  requested removing the degradation sidebar from Curriculum, showing only the
+  reference, and adding stage customization. Clarification selected full stage
+  add/remove/reorder support. Curriculum now shows source/stage controls and one
+  reference viewport, hiding the augmented pane/divider and Link views toggle.
+  Scan Recipe retains paired images and degradation controls, Compare retains
+  all levels. Workspace changes preserve existing region weights/preview state.
+  Added `desktop_curriculum.py` for Add/Duplicate/Remove/Move up/down, editable
+  unique name/description/focus/mix notes, Reset stage details and source-type
+  selection. Added BUI-independent `curriculum_plan.py` for defaults/validation
+  (1–32 stages, bounded text, unique stable IDs/names, supported generator types).
+  Custom stage IDs remain distinct from the existing five backend source IDs,
+  so renaming, cloning or reordering does not misroute generation. Duplicates have
+  independent details; deleting the final stage is blocked. Source types choose
+  among the existing generators or Real scans; no new musical generator coverage
+  or training sampler was introduced. Stage mix remains editable planning text.
+  Complete plan/order and selected stage persist in `.musvitlab` schema v2. Old
+  v1 projects receive default stages on load; old app versions reject new v2 files
+  instead of silently dropping custom plans. Existing recipe JSON remains v1/v2.
+  Updated workspace input/layout tests to exercise paired controls in Scan Recipe,
+  and documented the new workflow/modules. Restored a missing sqlite3 import in
+  the coordinator's collection-error handling found during inspection.
+  Checks: all 63 app tests passed in 14.592s after schema-version changes. New
+  coverage checks independent stage edits, clone/order/reset/source mapping,
+  generation using the backend stage ID, exact custom-plan project round trip,
+  old-project defaults, invalid names/types/selection and 1–32-stage boundaries.
+  Additional legacy archive Open/upgrade and required-v2-plan checks passed in
+  the targeted project suite. Headless geometry with a displayed fixture reference
+  passed at 1520×960 and 1060×760: single viewport occupies over 60% of window
+  width and hidden degradation/image dividers stay hidden. Screenshot visually
+  inspected at `/private/tmp/musvit-curriculum-stages-20261108.png`. Compilation
+  and whitespace checks passed. Native Cocoa event-loop interaction and actual
+  musical engraving were not repeated for this UI/project change; source-image
+  test uses a mocked generator. No datasets, scans, annotations, existing project
+  files, weights or training exports were overwritten. Exact next action:
+  restart the desktop, customize/add/reorder stages in Curriculum, choose each
+  supported source type, inspect the reference and Save project to retain it.
+
+
+- **2026-11-13 — Transcoda paper review and target recommendation:** read the
+  supplied `trasncoda_paper.pdf` (arXiv:2605.10835v1), inspected the rendered
+  normalization/augmentation and ablation pages, and compared the local MuSViT
+  paper A.9.1, codec contract, historical target-format audit and curriculum design.
+  Also read the public Transcoda repository landing page and Humdrum kern
+  specification; no upstream code executed or model evaluated. Paper Table 3:
+  synthetic greedy OMR-NED 18.71 versus 82.51 without normalization; real-scan
+  greedy baseline 65.76 versus 80.10 without concatenation, 76.95 without raster
+  degradation and 78.99 without asymmetric augmentation. These are authors'
+  reported results, not local experiments. Normalization is a bundled intervention,
+  including removing non-target notation; it does not isolate a kern-versus-our-
+  codec benefit. Suggested retaining MusicXML as canonical source/export and
+  evaluating normalized Humdrum for model targets with required notation/text
+  preservation, rather than restoring the historically lossy bekern cleaner.
+  Further takeaways: match page density/target length as well as scan appearance;
+  vary engraving geometry/fonts; avoid treating intended performance markings as
+  distractors; keep validity distinct from recognition accuracy; evaluate in a
+  common musical metric. Grammar cannot prevent valid hallucinations/voice drift.
+  Cautions: historical scans remain at 63.97 beam OMR-NED; no demonstrated
+  handwritten-notation result; Polish references occur in the synthetic validation
+  description, so this is not proof of untouched-domain evaluation; visual
+  pretraining comparison changes encoder size too, and its table/prose differ.
+  Existing compact-target local failure remains evidence against assuming that
+  shortening alone fixes training. No files containing datasets, scans, labels,
+  weights or user projects changed, and no training/conversion experiment ran.
+  Exact proposed next action: audit existing horn/piano/cross-staff/drum/navigation/
+  text fixtures through the candidate conversion/normalization path, recording
+  loss, target length and MusicXML round-trip fidelity before a replacement decision.
+
+
+- **2026-11-13 — MusicXML normalization policy and differential audit:** user
+  asked to write the policy and check equivalence/preservation after selecting
+  MusicXML; clarified that existing early datasets/checkpoints do not matter.
+  Recorded policy in `experiments/full_page_omr/docs/NORMALIZATION_POLICY.md` and
+  linked it from codec, curriculum and workspace guides. Concrete rules are
+  recommended implementation details, not claims of completed codec behavior.
+  Proposed omissions name editor metadata, absolute layout coordinates/automatic
+  breaks, playback-only settings and classified unprinted analysis; readable
+  notation remains preserved. Source MusicXML stays intact. No migration layer
+  or separate compatibility-preservation project is required.
+  Added `diagnostics/normalization_audit.py`: original programmatic paired scores,
+  no renderer, downloads or artifact writes. Executed 15 pairs: 2 equivalences
+  satisfied, 6 equivalences remain distinct, all 7 required musical differences
+  remain distinct. The six gaps are redundant later divisions declarations,
+  chord order, independent voice serialization, absent/zero alteration, default
+  note visibility and equivalent cursor-relative direction locations. Every
+  stream passed encode/decode round trip and normalization idempotence; no probe
+  errors. Audit exits 1 explicitly because policy gaps remain, not a passing
+  implementation acceptance test. Executed codec/constrained-decoding unittest
+  suites: 23 tests passed in 5.837s. No renderer/score-editor comparison or model
+  experiment executed. Production codec and all existing datasets, annotations,
+  weights and desktop work preserved. Exact next action: implement timing/default/
+  declaration canonicalization directly, followed by relationship-aware ordering;
+  expand hard-case probes and re-render fixtures before the next training export.
+
+
+- **2026-11-14 — MusicXML beside the Curriculum reference:** user requested
+  inspecting MusicXML next to the rendered image on the Curriculum tab. Added a
+  dedicated resizable reference/XML split, visible only in Curriculum. Existing
+  source/augmented split and project image-weight serialization remain intact.
+  Added `SourceText` in `desktop_widgets.py`: BUI 0.4.1 only supplies single-line
+  editable fields, so the read-only inspector draws visible monospaced lines and
+  a number gutter through the existing synchronous image-buffer path. Wheel
+  scrolls lines; Shift+wheel scrolls horizontally; Top resets both axes. Original
+  UTF-8 XML is held unchanged, with no parsing, rewriting or source edits.
+  Coordinator loads `source.musicxml` when displayed preview identity changes,
+  shows unavailable/no-source/no-preview messages, and keeps XML synchronized
+  with displayed images across workspace switches and pending control edits.
+  Project restore uses existing bundled XML assets without a schema change.
+  Added two integration tests covering stale-control ownership, Unicode/exact
+  source retention, saved-project reload, empty states, workspace visibility,
+  normal/minimum layout, actual BUI scroll and Top-button events, and image-pan
+  independence. First scroll test exposed floating-point wheel deltas entering
+  line indices; corrected integer clamping. Final full Bar Review suite: 65 tests
+  passed in 16.019s. Generated an actual clean one-note source/engraving in a
+  temporary directory and inspected headless screenshot
+  `/private/tmp/musvit-curriculum-xml-20261114.png`. Whitespace checks passed.
+  Native Cocoa window interaction was not repeated. Inspector is not an editor
+  or normalizer; new divider/scroll state is session-only. Existing uncommitted
+  desktop/normalization work preserved; datasets, scans, annotations, user project
+  files and weights unchanged. Exact next action: restart the desktop, generate
+  or reopen a synthetic Curriculum preview, then inspect XML beside its image.
+
+
+- **2026-11-14 — Reference-scoped controls and drag performance:** user requested
+  moving zoom controls from the shared image/XML parent into the reference pane
+  and improving mouse-drag panning. Moved resolution/zoom/Fit controls and image
+  help into Source / Reference; shared controls reparent to the Compare toolbar
+  only when that workspace opens. Source and XML widths remain independently
+  resizable. Profiling a 75%-zoom drag showed repeated bicubic affine sampling
+  dominating the callback: 0.413s of a 0.491s 60-step trace. Added one reduced-page
+  cache per viewport/source/scale below 100%, with fast nearest-neighbour viewport
+  extraction; native/magnified views keep direct sampling to bound memory. Added
+  an identical-frame guard and a dedicated center-only visible-image redraw path,
+  avoiding preview/recipe labels, XML and hidden augmented-pane work during pan.
+  Quick second clicks (BUI double-click events) now start dragging too; otherwise
+  rapid repeated drags could be ignored. Cache drops when the viewport clears or
+  returns to >=100% zoom and rebuilds for changed source/scale.
+  Added integration checks for control containment at 1520×960 and 1060×760,
+  repeated workspace reparenting without duplicate controls, actual drag events,
+  absence of XML/hidden/full-preview redraws, nearest-only transforms after warmup,
+  and cache reuse/invalidation. Full app suite: 67 tests passed in 15.485s.
+  Headless benchmark `/private/tmp/musvit-pan-benchmark.py` uses the programmatic
+  1400×1981 test image and 250-line source, 75% zoom, 60 warmup steps plus 180
+  measured mouse-motion/render frames. Baseline median/p95 8.4106/8.8029ms;
+  final 0.5768/0.6416ms. Final profiled 60-step trace 0.036s. An intermediate
+  artificially low median exposed repeated presses becoming double-click events;
+  it was discarded, corrected and rerun. Layout/image area also changes between
+  baseline/final, so timings are local end-to-end evidence, not a matched cache
+  ablation or native Cocoa latency result. Generated an actual one-note render
+  and inspected `/private/tmp/musvit-reference-controls-20261114.png`; inspected
+  minimum-size fixture screenshot at `...-small-20261114.png`. An initial small
+  screenshot attempt used a nonexistent Raster.save API; corrected to PPM/Pillow.
+  Whitespace checks passed. Native window drag smoothness not measured; the first
+  new-source/zoom frame still pays downsampling cost. Existing datasets, scans,
+  weights, user projects and other uncommitted work preserved. Exact next action:
+  restart desktop and test dragging a zoomed reference in the native window.
+
+
+- **2026-11-14 — Reconsidering a kern-based project scope (discussion):** user
+  is leaning toward revising goals around what **kern can express, motivated by
+  its use across the referenced papers. This reopens the earlier MusicXML target
+  choice; no replacement or removal of collection requirements was yet agreed.
+  Read current coverage/historical format audit and official Humdrum kern and
+  Verovio Humdrum Viewer documentation. Core kern covers pitch/rhythm/chords,
+  polyphonic spines and many notation marks; broader Humdrum conventions add
+  text/dynamics. Distinguish core kern, renderer-supported Humdrum and each paper's
+  normalized/cleaned target subset. Historical losses in our old bekern cleaner
+  were implementation findings, not general format incapacity. Recommendation:
+  pause expanding the MusicXML model target, define a concrete normalized Humdrum
+  recognition scope around supported conversion/render/export fixtures, and keep
+  MusicXML as source/editor interchange. Unusual percussion, jazz shorthand,
+  arbitrary scoped instructions and historical alternative layouts need explicit
+  tests or agreed deferral, not assumptions of unsupported syntax. Cross-paper
+  format use is an engineering advantage, not an isolated learning-performance
+  comparison. No code, exports or training changed; no conversion was executed.
+  Exact proposed next action: produce a representative feature coverage sheet
+  using the candidate converter/normalizer/renderer/editor-export path, marking
+  demonstrated support, missing implementation and proposed deferrals before
+  selecting the first kern-based training scope.
+
+
+- **2026-11-14 — Approved Humdrum scope and initial conversion audit:** user
+  accepted the proposed direction and answered all three scope questions: include
+  common dynamics/performance text immediately; cover percussion plus pitched
+  parts and piano; transcribe supported content and flag omissions for review.
+  Created `docs/HUMDRUM_SCOPE.md` with agreed scope, candidate standard conventions,
+  normalization/omission requirements, acceptance gaps and exact next action.
+  No 32nd-note cap was agreed. Omission detection on real scans is not solved;
+  report known source-backed losses and require review rather than promise all
+  unsupported symbols will be located automatically. MusicXML remains source and
+  editor interchange; the implemented v1 codec is retained pilot infrastructure.
+  Read primary Humdrum/VHV documentation for dynamics, text layout directions,
+  transposition and percussion; distinguished lyric **text from performance
+  `!LO:TX:` records. Inspected local dependencies: Verovio 5.0.0 installed;
+  music21/converter21 absent and conversion command names absent from PATH.
+  Added `diagnostics/humdrum_scope_audit.py` with isolated 15-second native probes,
+  disabled core dumps, summary-only stdout and no artifact writes. Executed
+  MusicXML-hum conversion -> buffer -> Humdrum reimport -> MEI on horn/piano/drums:
+  all three processes return zero and both conversion/reimport succeed. Horn
+  370 bytes/one initial kern spine; piano 287/two; drums 308/one. Basic event
+  counts match these fixtures, but no pitch/onset/staff/voice fidelity audit ran.
+  Horn's two complete instruction strings not found in returned MEI despite two
+  Humdrum text-layout comments; no returned gliss element for its two endpoints.
+  Piano returns no pedal elements for its two source pedal markers. Drums return
+  both instruction strings. These are converter/reimport observations, not
+  inherent format limitations. The historical native aborts did not recur on
+  these probes; no patch/upgrade was made. Script success means smoke execution,
+  not representation acceptance. No SVG/PNG/editor round trip, target training,
+  dataset export or model experiment executed. Preserved other uncommitted work.
+  Exact next action: build minimal text/escaping, pedal and glissando fixtures,
+  investigate their loss and select/repair a converter plus editor-export route
+  before declaring Humdrum feature support and freezing a tokenizer.
+
+
+- **2026-11-14 — Pedal conversion isolated:** user correctly pointed out kern's
+  `*ped` syntax. Verified primary VHV pedal documentation: `*ped` means pedal down,
+  `*Xped` pedal up. Ran an isolated native subprocess (15-second bound, core dumps
+  disabled) with local Verovio 5.0.0: a minimal direct Humdrum example loads and
+  yields two MEI pedal elements with down/up directions. The MusicXML-converted
+  piano fixture has no pedal-related tokens. Therefore the observed loss is in
+  this MusicXML-to-Humdrum conversion path, not lack of format expressiveness or
+  basic Humdrum import support. Updated scope report; no converter code changed.
+  Pedal-line/change/half-pedal, attachment and editor export remain untested.
+  Exact next action: repair/select the source conversion path to emit the existing
+  pedal syntax, preserving staff/onset, and add a regression fixture.
+
+
+- **2026-11-14 — Direct canonical Humdrum generation and source viewer:** user
+  approved removing MusicXML from the core pipeline and displaying kern instead
+  of XML. Added `generation/humdrum_scores.py`: direct seeded sources for all
+  eight Curriculum examples, fixed generated spelling/order, direct Verovio
+  input, derived SVG/MEI, outlined text and native raster generation. New sources
+  are newly authored examples, not translations of older MusicXML compositions;
+  updated source fingerprints prevent reuse of obsolete engravings. Native
+  source profile is `musvit-humdrum-preview-v1`. Piano includes native pedal
+  down/up, chords, split/merge voices and dynamics. Drums include unpitched
+  marks, x noteheads, rhythmic voices and scoped instructions. Cross-staff RDF
+  explicitly moves two notes above. Rendering checks expected event/measure/
+  staff/pedal counts, instruction text and cross-staff assignment presence.
+  These safeguards do not establish arbitrary-score equivalence or coverage.
+  Text-before-split experiments exposed lost attachment; comments now immediately
+  precede target notes after structural interpretations. MEI full rests use
+  mRest rather than rest and are counted appropriately.
+  Simplified `curriculum.synthetic`, warm-worker preload and source fingerprints
+  to remove the MusicXML generators, pilot exporter and tree-codec dependencies.
+  Preview artifacts now contain source.krn plus derived source.svg/source.mei;
+  checksum-verified reuse validates/copies all derived files. Artifact allowlists
+  and portable projects accept them; old XML-only saved assets remain readable,
+  but the viewer requests regeneration instead of silently converting them.
+  Source pane is now **kern / HUMDRUM with readable tab stops and existing
+  scrolling/Top/ownership behavior. Web lab exposes the same exact source.
+  Initial replay tests exposed random Verovio IDs, unordered glyph definitions,
+  differing formatting tails and ID-bearing milestone classes. Stabilized those
+  derived XML structures/references and omitted renderer application isodate;
+  source Humdrum strings are unchanged. Repeated font/process replay now passes.
+  Added three focused tests, including isolated native integration rendering all
+  eight examples, actual percussion x-head/two cross-staff-note checks, all three
+  fonts, exact source/hash identity, deterministic replay, reuse, ZIP and fresh-
+  directory project restoration. An import guard rejects legacy MusicXML dataset/
+  codec imports in the native path. Full Bar Review suite: 70 passed in 15.500s.
+  JS syntax and diff whitespace passed. Generated and visually inspected actual
+  desktop piano/drum screenshots at `/private/tmp/musvit-kern-piano-20261114.png`
+  and `...-drums-20261114.png`; cross-staff screenshot also generated. Native
+  Cocoa mouse interaction and web browser interaction were not repeated.
+  Added pipeline guide and updated scope/workspace/app/diary docs. No historical
+  datasets, scans, annotations, weights or user project files overwritten; prior
+  uncommitted work preserved. Current native generation has no hairpin/full jazz/
+  navigation/imported-score normalization contract, and the Humdrum training
+  tokenizer/adapter is not implemented. Old MusicXML trainers remain historical
+  tools, not the new target path. Exact next action: restart/regenerate in the
+  lab; extend feature fixtures and implement a deterministic Humdrum tokenizer/
+  bounded training adapter before producing fresh training datasets.

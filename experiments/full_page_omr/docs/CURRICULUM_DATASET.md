@@ -1,8 +1,29 @@
 # Full-size OMR curriculum and scan dataset
 
+2026-11-14 implementation update: new [Curriculum Lab previews](HUMDRUM_PIPELINE.md)
+are authored directly in Humdrum, with SVG/MEI/raster derived by Verovio. MusicXML
+is optional at import/editor boundaries. Earlier source/target implementation
+recommendations below are historical; new tokenizer/training work must use the
+selected canonical Humdrum direction.
+
+2026-11-14 update: use the selected [Humdrum recognition scope](HUMDRUM_SCOPE.md)
+for the next model target, retaining MusicXML sources/editor interchange. First
+milestone includes pitched parts, piano, percussion, common dynamics and
+performance text, with omissions flagged. Target conversion/fidelity work now
+precedes the earlier MusicXML-target implementation sequence below. The model,
+scan-calibration and grouped-data proposals remain relevant; no new training is
+queued by this update.
+
 Design recorded 2026-11-08. The user selected a move toward the full-size
 paper-based OMR model and curriculum/dataset work, with real scans as the target.
 The recipes, quantities and gates below are proposals, not executed experiments.
+
+2026-11-13 update: the user selected retaining MusicXML and defining explicit
+normalization/omission decisions. See [the policy and executed codec audit](NORMALIZATION_POLICY.md).
+Apply the resulting target normalization before freezing a new training export;
+existing early datasets/checkpoints need no compatibility/migration work. The
+full-model and scan-calibration proposals below remain relevant, but do not
+assume the current v1 target already satisfies the new policy.
 
 ## Evidence and model choice
 

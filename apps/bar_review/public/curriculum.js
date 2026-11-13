@@ -72,7 +72,7 @@ function selectStage(id) {
   $('stage-mix').textContent = item.mix;
   $('synthetic-fields').hidden = id === '4'; $('real-fields').hidden = id !== '4';
   $('source-kind').textContent = id === '4' ? 'Imported scan' : 'Generated example';
-  $('source-help').textContent = id === '4' ? (documents.length ? 'Full imported pages. Original scan quality is preserved; additional damage is applied only to a preview copy.' : 'No scans imported yet. Return to the transcription queue and import a PDF or image, then reload this page.') : 'Seeds vary note, passage and page examples. Focused voice fixtures stay fixed.';
+  $('source-help').textContent = id === '4' ? (documents.length ? 'Full imported pages. Original scan quality is preserved; additional damage is applied only to a preview copy.' : 'No scans imported yet. Return to the transcription queue and import a PDF or image, then reload this page.') : 'Seeds vary the generated music. The focused cross-staff example is fixed.';
   options($('example'), item.examples.map(x => [x, catalog.examples[x]]));
   $('generate').disabled = busy || (id === '4' && !documents.length);
   dirty();
@@ -128,7 +128,15 @@ async function generate(event) {
     $('recipe').textContent = JSON.stringify(result,null,2);
     $('geometry-note').textContent = `Geometry: ${result.geometry}. ${result.preprocessing}.`;
     const link = $('export-preview'); link.href = `/api/curriculum/export/${result.id}`; link.classList.remove('disabled'); link.setAttribute('aria-disabled','false');
+    $('score-source').textContent = 'Loading the displayed preview source…';
     await showImages();
+    if (result.files['source.krn']) {
+      try {
+        const source = await fetch(`/curriculum-artifacts/${result.id}/source.krn`);
+        if (!source.ok) throw new Error('Source unavailable');
+        $('score-source').textContent = await source.text();
+      } catch { $('score-source').textContent = 'Humdrum source unavailable for this preview.'; }
+    } else $('score-source').textContent = 'This preview has no Humdrum source. Imported scans have no score source.';
     if (revision !== requestedRevision) status('Preview ready for earlier settings. Generate again to apply your latest changes.', 'stale');
     else { const dpiLimit = result.effects.some(effect => effect.parameters.source_limited) ? ' A DPI step exceeded the available source resolution; no extra detail was invented.' : ''; status(`Preview ready · ${result.effects.length} effect groups · seed ${result.settings.seed}. Export saves exactly this preview.${dpiLimit}`); $('dirty').textContent = 'Preview matches the current settings.'; }
   } catch (error) { status(error.message, 'error'); }

@@ -13,8 +13,8 @@ The model-target direction is normalized Humdrum centered on **kern, with
 established dynamics/text/percussion conventions. Humdrum is also the canonical
 musical source; MusicXML is optional at import/editor boundaries. The
 [direct-source preview pipeline](HUMDRUM_PIPELINE.md) is implemented. Imported-score
-normalization and new model training remain pending. Existing pilot code/artifacts
-stay intact; compatibility with early targets/checkpoints is not required.
+normalization and new model training remain pending. Historical pilot artifacts stay intact; the retired code is available in Git.
+Compatibility with early targets/checkpoints is not required.
 
 ## What belongs in the first milestone
 
@@ -89,9 +89,12 @@ and not an agreed blanket exclusion. Exact historical page layout is distinct
 from readable, standardized re-engraving. Retain the older
 [collection inventory](TARGET_COVERAGE.md) as the review checklist.
 
-## Executed local smoke audit
+## Historical conversion smoke audit
 
-Run with no exports or model calls:
+The results below were recorded before direct Humdrum generation replaced the
+conversion path. The audit script depended on retired MusicXML fixtures and was
+removed with that stack. Retrieve it at Git commit `1b57dfe`; the following was
+its historical command, not a current entrypoint:
 
 ```sh
 DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib \

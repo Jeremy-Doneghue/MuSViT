@@ -1,123 +1,55 @@
 # Full-page OMR workspace
 
-Start with [the project diary](../../PROJECT_DIARY.md) for decisions and the latest
-results. The active Curriculum Lab preview path uses
-[direct Humdrum sources](docs/HUMDRUM_PIPELINE.md). Earlier `musvit-score-v1`
-trainers/results remain historical experiment tools.
-The original bekern/Lightning pipeline has been removed; its implementation
-remains available in the [original MuSViT repository](https://github.com/OMR-PRAIG-UA-ES/MuSViT).
+Start with [the project diary](../../PROJECT_DIARY.md) for decisions and verified
+state. New curriculum examples are authored directly in **kern/Humdrum and
+rendered by Verovio. MusicXML is optional at import/editor boundaries.
 
-## Where things live
+## Current code
 
-| Directory / file | Purpose | Used by |
-| --- | --- | --- |
-| `generation/` | Synthetic parts, MusicXML/MEI conversion, jazz notation, scenario sampling, fonts | Dataset/tooling work; codec fixtures also use conversion and font helpers |
-| `representation/` | Versioned score vocabulary, codec, semantic checks, fixtures, optional grammar constraints | All current exports, training and evaluation |
-| `datasets/` | Pilot, clean-page, short-staff and one-note exports/adapters; controlled dense edits | Current training and transfer probes |
-| `training/` | Pilot and clean-page trainers; short-staff and one-note orchestration | Current experiments; shared model/greedy-decoding helpers live here too |
-| `diagnostics/` | Musical-field and image-swap probes, constrained evaluation, re-engraving | Evaluation of saved runs |
-| `smt_foundation/` | Shared encoder/decoder model and configuration | Current training and diagnostics |
-| `paths.py` | Stable experiment-root location | Source provenance hashes after relocation |
-| `docs/` | Dataset/codec guides and experiment reports | Reading and reproduction |
-| `outputs/` | Ignored datasets, saved runs, diagnostics and local native dependencies | Existing experiment artifacts; preserved in place |
-| `weights/` | Original pipeline's local checkpoints | Historical artifacts; preserved in place |
+| Path | Responsibility |
+| --- | --- |
+| [generation/humdrum_scores.py](generation/humdrum_scores.py) | Seeded Humdrum sources for eight examples; direct SVG/MEI/raster rendering and source checks. |
+| [generation/font_resources.py](generation/font_resources.py) | Portable text outlines, font metadata and glyph-fallback inspection. |
+| [smt_foundation/](smt_foundation/) | Reusable MuSViT encoder/Transformer decoder and configuration. No dependency on the retired score-tree codec. |
+| [../../apps/bar_review/](../../apps/bar_review/) | Curriculum Lab desktop/web UI, scan recipes, isolated preview workers, project/export storage and transcription review. |
+| [../scan_degradation/](../scan_degradation/) | Reproducible scan-image degradation tools shared with the app. |
 
-## Current experiment path
+## Current guides
 
-The selected next model-target direction is the
-[Humdrum scope and initial conversion audit](docs/HUMDRUM_SCOPE.md) (2026-11-14):
-pitched parts, piano, percussion, common dynamics and performance text, with
-omissions flagged for review. MusicXML remains the source/editor interchange.
-Direct Humdrum generation, preview rendering, source display and SVG/MEI export
-are implemented; arbitrary-input normalization and the new tokenizer/training
-adapter remain pending. This supersedes expanding the MusicXML-tree target as
-the immediate priority.
+- [Implemented Humdrum pipeline](docs/HUMDRUM_PIPELINE.md): source/image identity,
+  artifact formats, checks and limitations.
+- [Recognition scope](docs/HUMDRUM_SCOPE.md): pitched parts, piano, percussion,
+  dynamics, performance text and explicit omissions/review.
+- [Curriculum and dataset design](docs/CURRICULUM_DATASET.md): musical complexity,
+  appearance variation, source-family splits and evaluation proposals.
+- [Collection requirements](docs/TARGET_COVERAGE.md): the notation inventory and
+  examples that still need coverage.
+- [Historical reports](docs/HISTORY.md): previous experiments, measured results
+  and how to retrieve the removed implementation from Git.
 
-Current direction is the [full-model curriculum and dataset design](docs/CURRICULUM_DATASET.md),
-with calibrated Augraphy variation and real-scan evaluation. The 2026-11-13
-[MusicXML normalization policy and audit](docs/NORMALIZATION_POLICY.md) now
-specify target cleanup before a new training export; six audited normalization
-gaps remain in the codec. The latest completed
-[placement replication](docs/PLACEMENT_COMPARISON.md) reached 48/56 selected
-validation exact for expanded placement training in both seeds; the controls
-reached 25/56 and 13/56. This is a finite one-note appearance diagnostic, not
-full-page or real-scan recognition. The full decoder preset and new curriculum
-are not implemented yet; no experiment is running or queued. Consult the project
-diary for the authoritative current state and historical reports for earlier runs.
+## Run and verify
 
-```text
-representation/codec_fixtures + datasets/clean_page_data
-                      |
-             datasets/short_staff_data
-                      |
-          training/short_staff_experiment
-                      |
-          training/clean_page_experiment
-                      |
-             training/overfit_pilot
-                      |
-               smt_foundation
-```
-
-`overfit_pilot.py` is shared infrastructure as well as an older experiment:
-`local_encoder`, `make_model`, `CachedGreedy` and related decoding helpers are
-still used by current trainers and diagnostics. `datasets/pilot_data.py` similarly
-provides export, hashing and adapter helpers used beyond the pilot.
-`short_staff_experiment.py` also calls `diagnostics/clean_page_diagnostics.py` for
-field metrics. These historical names do **not** indicate dead code.
-
-## Commands and reports
-
-Run from the repository root. CLI arguments remain documented in the linked
-reports; module names now include their purpose directory.
-
-| Task | Module (`python -m ...`) | Guide |
-| --- | --- | --- |
-| Generate instrumental parts | `experiments.full_page_omr.generation.generate_parts` | [Synthetic parts](docs/SYNTHETIC_PARTS.md) |
-| Compare fonts | `experiments.full_page_omr.generation.font_coverage` | [Font coverage](docs/FONT_COVERAGE.md) |
-| Export codec fixtures | `experiments.full_page_omr.representation.codec_fixtures` | [Score codec](docs/SCORE_CODEC.md) |
-| Tiny/dense overfit training | `experiments.full_page_omr.training.overfit_pilot` | [Pilot](docs/OVERFIT_PILOT.md), [dense overfit](docs/DENSE_OVERFIT.md) |
-| Export clean pages | `experiments.full_page_omr.datasets.clean_page_data` | [Clean baseline](docs/CLEAN_BASELINE.md) |
-| Clean-page/diversity training | `experiments.full_page_omr.training.clean_page_experiment` | [Long baseline](docs/LONG_BASELINE.md), [diversity](docs/DIVERSITY_BASELINE.md) |
-| Export short passages | `experiments.full_page_omr.datasets.short_staff_data` | [Short staff](docs/SHORT_STAFF.md) |
-| Train/evaluate short passages | `experiments.full_page_omr.training.short_staff_experiment` | [Short staff](docs/SHORT_STAFF.md) |
-| Export one-note pitch pilot | `experiments.full_page_omr.datasets.one_note_data` | [One note](docs/ONE_NOTE.md) |
-| Train/evaluate one-note pitch pilot | `experiments.full_page_omr.training.one_note_experiment` | [One note](docs/ONE_NOTE.md) |
-| Export paired all-notes targets | `experiments.full_page_omr.datasets.pitch_target_data` | [Paired targets](docs/PITCH_TARGETS.md) |
-| Compare score/compact pitch targets | `experiments.full_page_omr.training.pitch_target_experiment` | [Paired targets](docs/PITCH_TARGETS.md) |
-| Controlled note edits | `experiments.full_page_omr.datasets.dense_contrast`, `experiments.full_page_omr.datasets.dense_composition` | [Controlled edits](docs/CONTROLLED_EDITS.md) |
-| Evaluate edit transfer | `experiments.full_page_omr.diagnostics.dense_contrast_eval` | [Controlled edits](docs/CONTROLLED_EDITS.md) |
-| Musical-field probes | `experiments.full_page_omr.diagnostics.clean_page_diagnostics` | [Long baseline](docs/LONG_BASELINE.md) |
-| Aggregate image-conditioning probe | `experiments.full_page_omr.diagnostics.clean_page_conditioning` | [Clean baseline](docs/CLEAN_BASELINE.md) |
-| Compare grammar constraints | `experiments.full_page_omr.diagnostics.constrained_experiment` | [Constrained decoding](docs/CONSTRAINED_DECODING.md) |
-| Re-engrave pilot predictions | `experiments.full_page_omr.diagnostics.pilot_review` | [Pilot](docs/OVERFIT_PILOT.md) |
-
-## Removed pipeline and migration notes
-
-The legacy bekern datasets, Lightning trainer, excerpt renderer, augmentation,
-configs and vocabularies were deleted on 2026-11-04 at the user's request, along
-with the `musvit full-page-omr` launcher and legacy-only runtime helper. The
-legacy parser/vocabulary audit script was removed because it reads those sources;
-its [historical findings](docs/TARGET_FORMAT_ANALYSIS.md) remain documented.
-
-Use the module commands above for current experiments. Shared model code and
-pilot helpers remain because they are used by current training and evaluation.
-Saved datasets, checkpoints and historical outputs remain in place.
-
-Flat Python import and `python -m` paths have moved to the directories above;
-there are no compatibility wrappers. Repository callers, tests and report commands
-have been updated. Saved manifests, datasets, checkpoints and ignored historical
-scripts are untouched. Historical scripts that import the old flat module names
-need the same module-path updates before rerunning. Old source hashes describe
-those original runs; newly exported data/runs record the reorganized source hashes.
-
-For local validation with the existing native rendering dependencies:
+From the repository root:
 
 ```sh
-source experiments/full_page_omr/outputs/studio_setup_20261031/activate_rendering.sh
+.venv/bin/python apps/bar_review/desktop.py
+PYTHONPATH=apps/bar_review .venv/bin/python -m unittest discover -s apps/bar_review -p 'test_*.py' -q
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
-The activation script is a local artifact, not a portable installation recipe;
-see the [pilot setup report](docs/OVERFIT_PILOT.md#mac-studio-rerun--2026-10-31)
-for details.
+The desktop extra is required for BUI tests. Native SVG-to-PNG rendering needs
+Cairo; on this Mac set `DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib` when needed.
+Text outlining requires the HarfBuzz `hb-shape` command. See the app guide for
+installation, screenshots and the web server.
+
+There is no active Humdrum training command yet. Next work is broader scoped
+notation validation, arbitrary-input normalization and a tokenizer/training
+adapter. The model implementation is retained for that work; the old training
+entrypoints must not be treated as a Humdrum baseline.
+
+The retired MusicXML generators, restricted tree codec, dataset exporters,
+pilot trainers and their diagnostics/tests were removed after the Humdrum move.
+No replacement compatibility modules or executable archive was added. Reports
+stay at their existing paths with historical notices so diary links remain useful.
+Generated datasets, scans, annotations, weights and user projects were not deleted
+or rewritten; `outputs/` and `weights/` are local artifacts, not documentation.

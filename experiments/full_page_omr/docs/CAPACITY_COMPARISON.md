@@ -1,5 +1,13 @@
 # Small versus medium decoder — 2026-11-08
 
+> Historical report: the MusicXML-target implementation described here was
+> retired on 2026-11-14. Commands and relative source links below describe the
+> code at Git commit `1b57dfe`, not the current executable pipeline. See the
+> [historical index](HISTORY.md) for retrieval and the
+> [current pipeline](HUMDRUM_PIPELINE.md) for ongoing work. Results below are
+> retained as recorded; this cleanup did not rerun these experiments.
+
+
 Authorized bounded comparison; contract recorded before execution.
 Existing immutable dataset: `outputs/pitch_targets_20261106_01` (56/56 images,
 14 taught pitches with correlated new-placement validation, not repertoire transfer).

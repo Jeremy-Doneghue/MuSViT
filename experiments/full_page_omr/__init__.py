@@ -1,1 +1,1 @@
-"""Full-page OMR experiment: fine-tune MuSViT for Optical Music Recognition."""
+"""Humdrum score previews and the reusable full-page MuSViT model."""

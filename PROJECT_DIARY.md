@@ -23,8 +23,11 @@ or handwriting recognition.
   import/editor-export boundaries. See the [implemented preview pipeline](experiments/full_page_omr/docs/HUMDRUM_PIPELINE.md).
   Imported-score normalization and the new tokenizer/training adapter remain
   pending; existing datasets/checkpoints need no compatibility work.
-- Earlier MusicXML-tree experiments remain historical tools. Their implemented restricted target is
-  `musvit-score-v1` (614 fixed tokens); see the [codec contract](experiments/full_page_omr/docs/SCORE_CODEC.md).
+- The MusicXML-tree generators, codec, dataset exporters, pilot trainers and
+  diagnostics have been removed. Their reports and source-retrieval instructions
+  are in the [historical index](experiments/full_page_omr/docs/HISTORY.md).
+  The earlier target was `musvit-score-v1` (614 fixed tokens); the
+  [codec report](experiments/full_page_omr/docs/SCORE_CODEC.md) is historical.
   On 2026-11-06 the user also approved a diagnostic four-token pitch target,
   paired against the current target on the same all-pitches-taught images. It is
   restricted to the fixed one-note task, with MusicXML context supplied by code;
@@ -56,6 +59,20 @@ or handwriting recognition.
   [original repository](https://github.com/OMR-PRAIG-UA-ES/MuSViT) for the latter.
 
 ## Current state
+
+**2026-11-14 post-Humdrum cleanup:** after the user committed the migration
+(`1b57dfe`), removed the retired MusicXML generation/codec/dataset/training/
+diagnostic stack and its specialized tests (44 obsolete Python files). Generic
+font-resource tests were retained under an accurate name; the model, scan tools,
+active app and font renderer remain. Removed unused coverage-only font helpers,
+desktop storage re-exports and torchinfo dependency; lockfile check passes offline.
+Rewrote root/full-page navigation around the active pipeline and added a historical
+report index, with notices on 18 older reports and source retrieval at `1b57dfe`.
+All historical datasets/scans/annotations/weights/user projects remain untouched.
+Verification: 70 app tests passed; root suite ran 8 tests, 7 passed and MPS skipped;
+no missing first-party imports; CLI discovery, both JS checks and whitespace pass.
+Exact next action: review/commit cleanup, then extend scoped Humdrum notation and
+define its tokenizer/training adapter on the retained model.
 
 **2026-11-14 direct Humdrum curriculum pipeline:** user selected canonical
 Humdrum sources and targets, optional MusicXML boundaries, and kern in the source
@@ -2096,3 +2113,46 @@ full metrics and transient troubleshooting in subsystem reports rather than repe
   tools, not the new target path. Exact next action: restart/regenerate in the
   lab; extend feature fixtures and implement a deterministic Humdrum tokenizer/
   bounded training adapter before producing fresh training datasets.
+
+
+- **2026-11-14 — Remove the retired target pipeline after committed Humdrum move:**
+  user reported all work committed and requested cleanup. Verified initial clean
+  worktree at `1b57dfe` (Move to **kern). Traced first-party imports before edits;
+  the active Humdrum app depends only on the new generator and shared font helper,
+  not the old MusicXML stack. Removed 34 old full-page Python modules across
+  datasets/training/representation/diagnostics, old MusicXML/jazz/scenario/font-
+  sheet generation and unused paths helper, plus 10 target-specific test modules.
+  Moved the surviving glyph/text tests from `test_font_coverage.py` to
+  `test_font_resources.py`, dropping only the old generator/catalog tests. Retained
+  the reusable encoder/decoder/configuration, live text outlining/font metadata/
+  glyph audit helpers, scan-degradation utilities, staff OMR, detection and app.
+  Removed two coverage-only font helpers and unused desktop storage re-exports/
+  Separator import; tests now import storage directly from its owning module.
+  Kept MusicXML at the live annotation/editor and saved-asset boundaries; no
+  source scans, annotations, weights, user recipes/projects or experiment outputs
+  were deleted/rewritten. No compatibility code archive or shim was introduced.
+  Removed unused torchinfo from project requirements and pruned only its root
+  lock references/package record after verifying no other locked package depends
+  on it. Initial offline resolution with an empty temporary cache failed because
+  Verovio metadata was unavailable for a supported platform; after the exact
+  lockfile pruning, `uv lock --check --offline --cache-dir
+  /private/tmp/musvit-cleanup-uv-cache` passed (203 packages, no unrelated updates).
+  Rewrote full-page/root navigation to describe active sources, model, app and
+  pending Humdrum training work. Added docs/HISTORY.md with retained report index
+  and `git show 1b57dfe:<path>` retrieval, marked 18 retired reports historical
+  without changing their recorded results, and updated active scope/coverage/
+  curriculum/pipeline guides to remove stale executable recommendations. App
+  rendering instructions now use the actual Cairo library path rather than an
+  ignored old experiment activation script. Older dated diary entries remain
+  historical and were not rewritten.
+  Checks: full app suite 70 passed in 16.100s, including native Humdrum eight-
+  example/three-font/replay/portable-project integration. Remaining root suite:
+  8 tests ran in 0.236s, 7 passed, MPS unavailable skip (CPU model backward/EOS,
+  font fallback/outlining and scan effects/export). Static AST inspection found
+  zero missing first-party import modules in remaining apps/experiments/musvit/
+  tests. CLI `python -m musvit list` lists staff OMR and detection. Both JS syntax
+  checks, lockfile consistency and whitespace passed. No native UI interaction,
+  model training, corpus export or historical experiment rerun executed.
+  Exact next action: review/commit this cleanup; then implement remaining scoped
+  Humdrum fixtures and a deterministic tokenizer/training adapter using the
+  retained model, without restoring the retired tree codec/trainer assumptions.

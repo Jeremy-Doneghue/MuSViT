@@ -1,4 +1,4 @@
-"""Bundled font outline audits and portable text for coverage sheets."""
+"""Bundled glyph audits and portable SVG text for Humdrum rendering."""
 
 import base64
 from functools import lru_cache
@@ -26,14 +26,6 @@ def font_info(path):
         names = font['name']
         return dict(file=Path(path).name, sha256=sha256(path),
                     family=names.getDebugName(1), version=names.getDebugName(5))
-
-
-def resource_fingerprint(metadata, glyph_dir):
-    digest = hashlib.sha256()
-    for path in [Path(metadata), *sorted(Path(glyph_dir).glob('*.xml'))]:
-        digest.update(path.name.encode())
-        digest.update(path.read_bytes())
-    return digest.hexdigest()
 
 
 def _shape_key(symbol):
@@ -210,26 +202,3 @@ def outline_text(svg, font_path, fallback_path, font_cache, music_font_name=None
         music_text_fonts={name: font_info(path) for name, path in embedded.items()},
         music_text_fallbacks=sorted(music_fallbacks),
         fallback_characters=[dict(character=c, codepoint=f'U+{ord(c):04X}') for c in sorted(misses)])
-
-
-def compact_svg(svg):
-    """Crop unused page height using Verovio's absolute drawing bounding boxes."""
-    root = ET.fromstring(svg)
-    inner = next(n for n in root.iter(f'{{{SVG}}}svg') if n.get('class') == 'definition-scale')
-    _, _, width, _ = map(float, inner.get('viewBox').split())
-    rectangles = [n for g in root.iter() if 'bounding-box' in g.get('class', '').split()
-                  for n in g if n.tag == f'{{{SVG}}}rect']
-    if not rectangles:
-        raise ValueError('Coverage crops require svgBoundingBoxes')
-    # Internal coordinates include a 500-unit page margin; allow extra room for
-    # differences between Verovio's metrics and the outlined text face.
-    bottom = max(float(r.get('y')) + float(r.get('height')) for r in rectangles) + 1200
-    for parent in root.iter():
-        for child in list(parent):
-            if 'bounding-box' in child.get('class', '').split():
-                parent.remove(child)
-    inner.set('viewBox', f'0 0 {width:g} {bottom:g}')
-    root.set('width', '1100px')
-    root.set('height', f'{1100 * bottom / width:g}px')
-    ET.register_namespace('', SVG)
-    return ET.tostring(root, encoding='unicode', xml_declaration=True), 1100 * bottom / width

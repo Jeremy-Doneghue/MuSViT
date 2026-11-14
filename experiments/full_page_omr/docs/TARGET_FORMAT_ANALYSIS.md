@@ -1,5 +1,13 @@
 # Target-format analysis — 2026-10-31
 
+> Historical report: the MusicXML-target implementation described here was
+> retired on 2026-11-14. Commands and relative source links below describe the
+> code at Git commit `1b57dfe`, not the current executable pipeline. See the
+> [historical index](HISTORY.md) for retrieval and the
+> [current pipeline](HUMDRUM_PIPELINE.md) for ongoing work. Results below are
+> retained as recorded; this cleanup did not rerun these experiments.
+
+
 Implementation update: the user subsequently approved the prototype. See
 [SCORE_CODEC.md](SCORE_CODEC.md) for the implemented v1 contract, executed fixtures
 and remaining limits. The analysis below records the preceding recommendation

@@ -37,16 +37,17 @@ session handoffs. The [full-page directory guide](experiments/full_page_omr/READ
 maps the current experiment modules. New Curriculum Lab previews use the
 [direct Humdrum pipeline](experiments/full_page_omr/docs/HUMDRUM_PIPELINE.md):
 canonical kern/Humdrum sources, Verovio SVG/MEI and raster outputs. MusicXML is
-optional at import/editor boundaries. The [synthetic parts guide](experiments/full_page_omr/docs/SYNTHETIC_PARTS.md)
-records the earlier MusicXML generator/dataset conventions; existing trainers
-remain historical tools pending the new Humdrum tokenizer/training adapter.
+optional at import/editor boundaries. The retired MusicXML generators,
+score-tree codec and pilot trainers are documented in the
+[historical reports](experiments/full_page_omr/docs/HISTORY.md); their code is
+preserved in Git. A Humdrum tokenizer/training adapter remains to be implemented.
 
 This project includes:
 - A central CLI (`musvit`) for staff-level OMR and symbol detection.
-- A full-page Optical Music Recognition (OMR) fine-tuning pipeline.
+- A reusable full-page OMR model and direct Humdrum curriculum previews.
 - A staff-level OMR fine-tuning pipeline (linear probing or LoRA).
 - An object-detection fine-tuning pipeline (Faster R-CNN with a MuSViT backbone).
-- Synthetic instrumental-part generation, font coverage checks, and scan-degradation experiments.
+- Seeded Humdrum examples, portable font rendering and scan-degradation tools.
 - A local transcription-review prototype for building reviewed image/MusicXML pairs.
 
 <a name=repository-layout></a>
@@ -55,7 +56,7 @@ This project includes:
 | Folder | Description |
 | --- | --- |
 | [`musvit/`](musvit) | Central launcher (`musvit` CLI): discovers and runs the experiments. |
-| [`experiments/full_page_omr/`](experiments/full_page_omr) | Fine-tune MuSViT for full-page Optical Music Recognition (OMR). |
+| [`experiments/full_page_omr/`](experiments/full_page_omr) | Direct Humdrum score generation/rendering and the reusable full-page OMR model. |
 | [`experiments/staff_level_omr/`](experiments/staff_level_omr) | Fine-tune MuSViT for staff-level OMR (BiLSTM/CTC head; linear probing or LoRA). |
 | [`experiments/object_detection/`](experiments/object_detection) | Fine-tune MuSViT + Faster R-CNN for object detection (COCO-format data). |
 | [`experiments/scan_degradation/`](experiments/scan_degradation) | Explore reproducible photocopy effects for training-image augmentation. |
@@ -124,21 +125,20 @@ uv run musvit staff-level-omr --help
 uv run musvit object-detection --help
 ```
 
-### Full-page OMR experiments
+### Full-page OMR and Curriculum Lab
 
-The current score-codec experiments have dedicated module entrypoints:
+Launch the active desktop lab (install the desktop extra first):
 
 ```bash
-uv run python -m experiments.full_page_omr.training.short_staff_experiment --help
-uv run python -m experiments.full_page_omr.training.clean_page_experiment --help
-uv run python -m experiments.full_page_omr.generation.generate_parts --help
+uv sync --extra desktop
+.venv/bin/python apps/bar_review/desktop.py
 ```
 
-See the [directory guide](experiments/full_page_omr/README.md) for dataset exports,
-training commands and results. The original bekern/Lightning pipeline and its
-`musvit full-page-omr` command have been removed. Refer to the
-[original MuSViT repository](https://github.com/OMR-PRAIG-UA-ES/MuSViT)
-for that implementation. Existing local experiment artifacts remain in place.
+See the [directory guide](experiments/full_page_omr/README.md) for the current code
+map and checks, and the [app guide](apps/bar_review/README.md) for controls and
+project export. Humdrum training is not implemented yet. Removed MusicXML pilot
+commands and their measured results are indexed in the
+[historical reports](experiments/full_page_omr/docs/HISTORY.md).
 
 ### Local transcription editor
 

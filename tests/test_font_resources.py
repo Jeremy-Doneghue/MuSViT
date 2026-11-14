@@ -1,30 +1,19 @@
-from contextlib import redirect_stdout
+"""Glyph fallback and text outlining used by the active renderer."""
 from importlib.util import find_spec
-import io
-import json
 from pathlib import Path
 import shutil
 import tempfile
 import unittest
 import xml.etree.ElementTree as ET
 
-from experiments.full_page_omr.generation.font_coverage import coverage_cases, generate_coverage
 from experiments.full_page_omr.generation.font_resources import (
     SVG, audit_glyphs, outline_text,
 )
-from experiments.full_page_omr.generation.scenarios import FEATURES, observe_features
 
 BASE_TEXT = Path(find_spec('matplotlib').origin).parent / 'mpl-data/fonts/ttf/DejaVuSerif.ttf'
 
 
-class FontCoverageTests(unittest.TestCase):
-    def test_catalog_covers_every_supported_feature(self):
-        cases = coverage_cases()
-        self.assertEqual(len(cases), 14)
-        self.assertEqual({f for case in cases for f in case.expected}, FEATURES)
-        for case in cases:
-            self.assertFalse(set(case.expected) - observe_features(case.source()).keys())
-        self.assertEqual([c.source() for c in cases], [c.source() for c in coverage_cases()])
+class FontResourcesTests(unittest.TestCase):
 
     def test_audit_detects_actual_fallback_and_broken_references(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -66,40 +55,6 @@ class FontCoverageTests(unittest.TestCase):
             outlined, report = outline_text(svg, limited, BASE_TEXT, directory)
             self.assertEqual(report['fallback_characters'], [dict(character='—', codepoint='U+2014')])
             self.assertIn('Solo — étude', outlined)
-
-    @unittest.skipUnless(shutil.which('hb-shape'), 'HarfBuzz CLI is required')
-    def test_sheet_is_self_contained_and_has_unique_ids(self):
-        with tempfile.TemporaryDirectory() as directory, redirect_stdout(io.StringIO()):
-            folder = Path(directory) / 'coverage'
-            manifest = generate_coverage(folder, fonts=['Leipzig', 'Petaluma'])
-            self.assertEqual([font['name'] for font in manifest['fonts']], ['Leipzig', 'Petaluma'])
-            report = json.loads((folder / 'Leipzig/report.json').read_text())
-            self.assertEqual(len(report['cases']), 14)
-            self.assertFalse(report['summary']['unattributed'])
-            self.assertFalse(report['summary']['missing_references'])
-            sheet = (folder / 'Leipzig/coverage.svg').read_bytes()
-            root = ET.fromstring(sheet)
-            ids = [n.get('id') for n in root.iter() if n.get('id')]
-            self.assertEqual(len(ids), len(set(ids)))
-            self.assertIn('encoding=', sheet[:80].decode())
-            self.assertNotIn(b'@font-face', sheet)
-            self.assertNotIn(b'<image', sheet)
-            self.assertTrue((folder / 'index.html').exists())
-            self.assertTrue((folder / 'Leipzig/text/preview.svg').exists())
-            petaluma = json.loads((folder / 'Petaluma/report.json').read_text())
-            self.assertEqual(petaluma['font']['provenance'], 'Verovio bundled resources')
-            self.assertFalse(petaluma['summary']['unattributed'])
-            self.assertFalse(petaluma['summary']['missing_references'])
-            self.assertTrue((folder / 'Petaluma/coverage.svg').is_file())
-            with self.assertRaises(FileExistsError):
-                generate_coverage(folder, fonts=['Leipzig', 'Petaluma'])
-
-    def test_unknown_font_rejected_before_output(self):
-        with tempfile.TemporaryDirectory() as directory:
-            folder = Path(directory) / 'invalid'
-            with self.assertRaisesRegex(ValueError, 'not bundled'):
-                generate_coverage(folder, fonts=['MissingFont'])
-            self.assertFalse(folder.exists())
 
 
 if __name__ == '__main__':

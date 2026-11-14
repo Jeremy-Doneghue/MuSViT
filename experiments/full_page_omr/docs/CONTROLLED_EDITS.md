@@ -1,5 +1,13 @@
 # Controlled dense-page edits — 2026-10-31
 
+> Historical report: the MusicXML-target implementation described here was
+> retired on 2026-11-14. Commands and relative source links below describe the
+> code at Git commit `1b57dfe`, not the current executable pipeline. See the
+> [historical index](HISTORY.md) for retrieval and the
+> [current pipeline](HUMDRUM_PIPELINE.md) for ongoing work. Results below are
+> retained as recorded; this cleanup did not rerun these experiments.
+
+
 The [longer baseline](LONG_BASELINE.md) memorized sampled training pages but
 failed all validation pages. Its gold-prefix image-swap sensitivity was weak on
 validation, and pitch/duration-value accuracy was much lower than aggregate token

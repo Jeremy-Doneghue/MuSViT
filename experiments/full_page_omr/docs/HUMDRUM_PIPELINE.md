@@ -73,8 +73,9 @@ scrolling and project restoration. See the diary for dated full-suite results.
 
 This implements a **generated-source preview profile**, not canonicalization of
 arbitrary Humdrum corpora. It does not implement a new trained decoder, vocabulary,
-training adapter or broad corpus export. Earlier MusicXML-tree trainers remain
-historical experiment tools and must not be presented as Humdrum trainers.
+training adapter or broad corpus export. Earlier MusicXML-tree trainers and the
+superseded codec/generators were removed; their [reports and Git source snapshot](HISTORY.md)
+remain available. The reusable model is retained in `smt_foundation/`.
 
 The selected broader [recognition scope](HUMDRUM_SCOPE.md) still needs fixtures for
 hairpins, transposing instruments, accidentals/tuplets beyond these examples,

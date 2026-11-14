@@ -1,5 +1,13 @@
 # Short-staff visual transfer experiment — 2026-11-01
 
+> Historical report: the MusicXML-target implementation described here was
+> retired on 2026-11-14. Commands and relative source links below describe the
+> code at Git commit `1b57dfe`, not the current executable pipeline. See the
+> [historical index](HISTORY.md) for retrieval and the
+> [current pipeline](HUMDRUM_PIPELINE.md) for ongoing work. Results below are
+> retained as recorded; this cleanup did not rerun these experiments.
+
+
 Status: bounded MPS run and both checkpoint controls completed; transfer gate failed.
 User approved setting up the diagnostic after review of DIVERSITY_BASELINE.md.
 

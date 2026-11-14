@@ -5,8 +5,10 @@
 Transcribe degraded scans of big-band parts, potentially handwritten, into an
 editable digital score that can be re-engraved. Piano is the most common
 polyphonic case, but the representation must support other instruments and
-staff arrangements. MusicXML is the current synthetic generator source format;
-neither MusicXML nor bekern has been selected as the model target.
+staff arrangements. Canonical Humdrum is now the source and model-target
+direction; see the [selected scope](HUMDRUM_SCOPE.md) and
+[implemented preview pipeline](HUMDRUM_PIPELINE.md). The inventory below records
+collection needs; unverified features require fixtures or explicit omissions.
 
 This is a requirements inventory. The user supplied the collection-specific
 features below on 2026-10-31. See [the format analysis](TARGET_FORMAT_ANALYSIS.md)
@@ -77,15 +79,14 @@ noteheads and text rather than guess instrument identities. Preserve text scope
 
 ## Next action
 
-The approved [codec prototype and synthetic round-trip fixtures](SCORE_CODEC.md)
-and [complete single-page overfit pilot](OVERFIT_PILOT.md) are implemented; eight
-tiny clean examples overfit exactly. Next establish source-disjoint held-out clean
-evaluation and realistic page density. Continuation-page context/assembly remains
-unimplemented. Extend coverage to unverified features and actual notation-editor export. Verify source
-annotations for alternative repeat layouts, drum notation/instructions and floating
-instructions; clipped-edge inference policy remains open.
-Use separate development examples and reserved evaluation scans; preserve
-source-composition identity across pages and variants. Keep scans and annotations
+Extend the current Humdrum fixtures to remaining scoped notation, then define a
+deterministic tokenizer/training adapter. Validate source/image relationships,
+notation export and editor interoperability before a new training export. The
+older MusicXML codec/pilot implementation has been retired; its results remain
+in the [historical reports](HISTORY.md).
+
+Use separate development examples and reserved evaluation scans. Preserve source
+composition/family identity across pages and variants. Keep scans and annotations
 out of documentation and commits; record local references rather than embed them.
 
 ## Supplied visual examples (2026-10-31)

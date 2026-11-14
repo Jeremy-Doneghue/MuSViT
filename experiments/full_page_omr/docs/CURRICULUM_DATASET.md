@@ -45,10 +45,11 @@ Our pilot factory instead sets feed-forward width to twice the model width and
 disables dropout. Merely selecting eight layers there would not restore these
 defaults. Introduce an explicit new preset without changing historical presets.
 
-Keep `musvit-score-v1` initially, and audit coverage before expanding the corpus.
-This remains an adaptation, not an exact paper reproduction: our targets and
-dataset differ from the original bekern setup. Check full-page token lengths,
-memory, runtime and cache/full-prefix agreement before committing a large budget.
+Use the selected Humdrum scope and audit coverage before expanding the corpus.
+The MusicXML-tree pilot codec and its trainers have been retired; their results
+remain historical evidence, not the next target implementation. Define the new
+tokenizer/training adapter before checking full-page token lengths, memory,
+runtime and cache/full-prefix agreement or committing a large budget.
 Never truncate targets to fit. Use .0001 as a starting decoder learning-rate
 candidate based on local evidence, not as an established full-model optimum.
 
@@ -179,8 +180,9 @@ those families, unseen degradation combinations, and actual real scans. Score
 printed and handwritten material separately. Report sequence edit error, semantic
 validity/EOS/truncation, aligned pitch/rhythm/rest accuracy, voice/staff relations,
 rare-feature errors and exact bars/pages. Invalid predictions count as failures;
-do not report only the valid subset. Our token SER is not directly comparable
-with the paper's bekern SER. Use family-level uncertainty estimates because
+do not report only the valid subset. Historical MusicXML-tree token SER is not directly comparable
+with the paper's bekern SER; define the new Humdrum tokenization before making
+sequence-metric comparisons. Use family-level uncertainty estimates because
 variants are correlated.
 
 For short passages, proposed progression criteria are >=99% semantic validity,
@@ -198,9 +200,10 @@ regressions. Synthetic robustness alone is insufficient. Tune on development
 only; report the locked test once the recipe is fixed. Later compare curriculum
 against mixed-complexity training at comparable compute.
 
-Next concrete work: implement the explicit full decoder preset and a bounded
-integration check; assemble a source-grouped scan calibration manifest and a
-clean/mild/moderate contact sheet from representative synthetic notation. Review
-legibility at actual model resolution, then freeze the first short-passage export
-contract and compute budget. No new training, annotation, data export or model
-configuration change has been executed as part of this design note.
+Next concrete work: validate remaining Humdrum notation and define its tokenizer,
+training adapter and explicit full decoder preset. In parallel with that design,
+assemble a source-grouped scan calibration manifest and reviewed clean/mild/
+moderate examples at actual model resolution. Then specify a bounded integration
+check and freeze the first short-passage export contract and compute budget. No
+new training, annotation, data export or model configuration change was executed
+as part of this design note.

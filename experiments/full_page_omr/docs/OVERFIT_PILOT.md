@@ -1,5 +1,13 @@
 # Clean single-page overfit pilot
 
+> Historical report: the MusicXML-target implementation described here was
+> retired on 2026-11-14. Commands and relative source links below describe the
+> code at Git commit `1b57dfe`, not the current executable pipeline. See the
+> [historical index](HISTORY.md) for retrieval and the
+> [current pipeline](HUMDRUM_PIPELINE.md) for ongoing work. Results below are
+> retained as recorded; this cleanup did not rerun these experiments.
+
+
 This is a bounded in-sample image-to-score experiment using the
 [score codec](SCORE_CODEC.md). The examples are complete, deliberately tiny
 compositions placed on single pages, not crops of a longer score. No continuation

@@ -1,5 +1,13 @@
 # Placement comparison — 2026-11-08
 
+> Historical report: the MusicXML-target implementation described here was
+> retired on 2026-11-14. Commands and relative source links below describe the
+> code at Git commit `1b57dfe`, not the current executable pipeline. See the
+> [historical index](HISTORY.md) for retrieval and the
+> [current pipeline](HUMDRUM_PIPELINE.md) for ongoing work. Results below are
+> retained as recorded; this cleanup did not rerun these experiments.
+
+
 Authorized contract fixed before launch. Medium 4x256, lr .0001, frozen encoder,
 score target, seed 7, same initial tensors restored for each version. Batch 1,
 AdamW/no decay, clip 1, no dropout. Source labels/pitches unchanged.

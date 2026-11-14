@@ -27,8 +27,7 @@ import recipes
 import lab_project
 from curriculum_plan import default_stages
 from preview_worker import PreviewWorker
-# Retain the original helper imports for callers of the desktop entry module.
-from desktop_storage import read_documents, write_new, write_recipe
+from desktop_storage import read_documents
 
 try:
     import blenderui as bui
@@ -41,7 +40,7 @@ try:
     from desktop_widgets import NumericParameter, PageImage, RecipePanel, ResizableRow
     from blenderui import host
     from blenderui.components import (
-        Button, Checkbox, Column, Dropdown, Label, Menu, MenuItem, Row, Separator,
+        Button, Checkbox, Column, Dropdown, Label, Menu, MenuItem, Row,
     )
 except ImportError as error:
     raise SystemExit('Install the desktop extra: uv sync --extra desktop') from error

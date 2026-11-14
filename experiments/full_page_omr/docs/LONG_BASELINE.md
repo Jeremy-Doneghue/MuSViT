@@ -1,5 +1,13 @@
 # Longer clean-page development baseline — 2026-10-31
 
+> Historical report: the MusicXML-target implementation described here was
+> retired on 2026-11-14. Commands and relative source links below describe the
+> code at Git commit `1b57dfe`, not the current executable pipeline. See the
+> [historical index](HISTORY.md) for retrieval and the
+> [current pipeline](HUMDRUM_PIPELINE.md) for ongoing work. Results below are
+> retained as recorded; this cleanup did not rerun these experiments.
+
+
 After the [six-page diagnostic](DENSE_OVERFIT.md) learned all three instruments
 with a frozen encoder, test greater exposure on the original 36 training pages.
 This follows the user's authorization to continue diagnostics and explicit GPU

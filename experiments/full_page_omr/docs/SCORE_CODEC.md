@@ -1,5 +1,13 @@
 # Score codec prototype
 
+> Historical report: the MusicXML-target implementation described here was
+> retired on 2026-11-14. Commands and relative source links below describe the
+> code at Git commit `1b57dfe`, not the current executable pipeline. See the
+> [historical index](HISTORY.md) for retrieval and the
+> [current pipeline](HUMDRUM_PIPELINE.md) for ongoing work. Results below are
+> retained as recorded; this cleanup did not rerun these experiments.
+
+
 `musvit-score-v1` translates a restricted MusicXML 4.0 score-partwise profile
 into deterministic integer tokens and back into editable MusicXML. This is the
 implemented first prototype approved after the [format analysis](TARGET_FORMAT_ANALYSIS.md).

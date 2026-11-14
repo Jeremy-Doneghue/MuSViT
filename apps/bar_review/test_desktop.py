@@ -16,7 +16,9 @@ import curriculum
 
 HAS_BUI = importlib.util.find_spec('blenderui') is not None
 if HAS_BUI:
-    from desktop import CurriculumDesktop, NumericParameter, WORKSPACES, read_documents, write_new, write_recipe
+    from desktop import CurriculumDesktop, WORKSPACES
+    from desktop_storage import read_documents, write_new, write_recipe
+    from desktop_widgets import NumericParameter
 
 
 @unittest.skipUnless(HAS_BUI, 'Install the optional desktop extra for BUI integration checks')

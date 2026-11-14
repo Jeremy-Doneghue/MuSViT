@@ -420,20 +420,19 @@ not inferred from passage annotations. No model or training job is loaded.
 Each preview runs in a fresh Python worker process, initializing Verovio fonts
 on its own main thread. Native renderer failures return an error without aborting
 the HTTP server. Workers have a 120-second timeout; requests remain serialized.
-Workers inherit the server's rendering environment, so source the activation
-script below before starting the server. If the browser loses its connection,
-check the server terminal and SSH tunnel, then restart/reload as needed.
+Workers inherit the server's rendering environment. If the browser loses its
+connection, check the server terminal and SSH tunnel, then restart/reload as needed.
 
-Synthetic rendering needs the repository's Verovio/Cairo setup. On this Mac:
+Synthetic rendering needs Verovio, Cairo and HarfBuzz's `hb-shape`. On this Mac,
+use the Homebrew Cairo library path when starting the web server:
 
 ```bash
-source experiments/full_page_omr/outputs/studio_setup_20261031/activate_rendering.sh
-.venv/bin/python apps/bar_review/server.py
+DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/lib .venv/bin/python apps/bar_review/server.py
 ```
 
-That activation script is a local artifact; see the
-[rendering setup report](../../experiments/full_page_omr/docs/OVERFIT_PILOT.md#mac-studio-rerun--2026-10-31)
-for other machines. The lab uses existing Python dependencies and no new JS
+The desktop launcher sets this Cairo path automatically when available. On other
+machines, use the installed system Cairo library. No ignored experiment activation
+script is required. The lab uses existing Python dependencies and no new JS
 dependencies. `pnpm --dir apps/bar_review install --ignore-scripts --lockfile=false`
 is an alternative when npm is unavailable for the existing notation editor.
 

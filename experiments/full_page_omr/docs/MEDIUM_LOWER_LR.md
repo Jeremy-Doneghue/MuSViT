@@ -1,5 +1,13 @@
 # Medium decoder lower learning rate — 2026-11-08
 
+> Historical report: the MusicXML-target implementation described here was
+> retired on 2026-11-14. Commands and relative source links below describe the
+> code at Git commit `1b57dfe`, not the current executable pipeline. See the
+> [historical index](HISTORY.md) for retrieval and the
+> [current pipeline](HUMDRUM_PIPELINE.md) for ongoing work. Results below are
+> retained as recorded; this cleanup did not rerun these experiments.
+
+
 Authorized comparison: lr .0001 versus completed .001 medium version in
 `outputs/capacity_mps_20261108_01`. Same 4 layers/256 width, 3674982 trainable
 parameters, frozen encoder, score targets and existing 56/56 all-pitches dataset.

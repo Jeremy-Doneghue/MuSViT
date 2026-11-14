@@ -1,5 +1,13 @@
 # All-notes paired output-target comparison — 2026-11-06
 
+> Historical report: the MusicXML-target implementation described here was
+> retired on 2026-11-14. Commands and relative source links below describe the
+> code at Git commit `1b57dfe`, not the current executable pipeline. See the
+> [historical index](HISTORY.md) for retrieval and the
+> [current pipeline](HUMDRUM_PIPELINE.md) for ongoing work. Results below are
+> retained as recorded; this cleanup did not rerun these experiments.
+
+
 Status: both versions and independent audit completed; neither passed the gate.
 Contract below was fixed before launch. This compares output representations on taught pitches at new placements;
 it is not a composition-disjoint benchmark or a complete compact score format.

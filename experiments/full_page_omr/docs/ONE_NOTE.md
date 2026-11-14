@@ -1,5 +1,13 @@
 # Bounded one-note pitch pilot — 2026-11-06
 
+> Historical report: the MusicXML-target implementation described here was
+> retired on 2026-11-14. Commands and relative source links below describe the
+> code at Git commit `1b57dfe`, not the current executable pipeline. See the
+> [historical index](HISTORY.md) for retrieval and the
+> [current pipeline](HUMDRUM_PIPELINE.md) for ongoing work. Results below are
+> retained as recorded; this cleanup did not rerun these experiments.
+
+
 Status: short and longer seed-7 MPS runs and controls completed; held-out transfer
 failed. The longer run mastered training at 16k/24k, then regressed. This is
 the first recognition diagnostic in the proposed curriculum, not the full
